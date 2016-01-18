@@ -20,17 +20,17 @@ It is early in the development.  As of now, the instructions to run are hard-cod
     p
 
 ... which doesn't look impressive, but it illustrates that the basic engine
-is working.
+is working.  I also support inverted conditions, like:
+
+   8,11 !d
 
 
 ## Next Steps
 
-Next I'll implement inverted conditions, like: 
+The most important missing piece is a lexer/parser for the sed commands. Right now,
+the test program is hard-coded in main.go.
 
-    /^NODEL/ !d
-
-After I have those working, I'll start working on the lexer/parser. Until then, the 
-`main` funciton will just hard-code the sed-program. 
+After that, I'll need to add the missing commands (importantly, s// isn't implemented yet!).
 
 
 ## Go Get
