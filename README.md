@@ -11,23 +11,23 @@ To be written.
 
 It is early in the development.  As of now, the instructions to run are hard-coded for `sed -n`:
 
-    5 =
+    $ d 
     8,11 {
        =
        p
     }
+    /import/, /^\)/ d
     p
 
 ... which doesn't look impressive, but it illustrates that the basic engine
-is working, and includes under-the-covers functionality which amounts to the
-`n` and `d` commands.
+is working.
 
 
 ## Next Steps
 
-Next I'll implement regexp guards for the commands, like:
+Next I'll implement inverted conditions, like: 
 
-    /^DEL/ d
+    /^NODEL/ !d
 
 After I have those working, I'll start working on the lexer/parser. Until then, the 
 `main` funciton will just hard-code the sed-program. 

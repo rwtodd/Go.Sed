@@ -111,7 +111,7 @@ type cmd_twocond struct {
 }
 
 func newTwoCond(c1 condition, c2 condition, loc int) instruction {
-   return &cmd_twocond{c1,c2,loc,false,0}
+	return &cmd_twocond{c1, c2, loc, false, 0}
 }
 
 func (c *cmd_twocond) run(e *engine) error {

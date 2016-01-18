@@ -9,13 +9,18 @@ import (
 func main() {
 	eng := engine{input: bufio.NewReader(os.Stdin), output: bufio.NewWriter(os.Stdout)}
 
+	re1, _ := newRECondition("import")
+	re2, _ := newRECondition(`^\)`)
+
 	eng.ins = append(eng.ins,
 		cmd_fillnext{},
-		&cmd_simplecond{numbercond(5), 3},
-		cmd_lineno{},
-		newTwoCond(numbercond(8), numbercond(11), 6),
-		cmd_lineno{},
-		cmd_print{},
+		&cmd_simplecond{eofcond{}, 3}, // $ d
+		&cmd_branch{0},
+		newTwoCond(numbercond(8), numbercond(11), 6), // 8,11 {
+		cmd_lineno{},                                 //     =
+		cmd_print{},                                  //     p  }
+		newTwoCond(re1, re2, 8),                      //  /import/,/^)/ {
+		&cmd_branch{0},                               //        d }
 		cmd_print{},
 		&cmd_branch{0})
 	err := run(&eng)
