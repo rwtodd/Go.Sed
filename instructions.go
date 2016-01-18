@@ -85,3 +85,53 @@ func (_ cmd_fillnext) run(e *engine) error {
 
 	return err
 }
+
+// --------------------------------------------------
+type cmd_simplecond struct {
+	cond condition // the condition to check
+	loc  int       // where to jump if the condition is not met
+}
+
+func (c *cmd_simplecond) run(e *engine) error {
+	if c.cond.isMet(e) {
+		e.ip++
+	} else {
+		e.ip = c.loc
+	}
+	return nil
+}
+
+// --------------------------------------------------
+type cmd_twocond struct {
+	start   condition // the condition that begines the block
+	end     condition // the condition that ends the block
+	loc     int       // where to jump if the condition is not met
+	isOn    bool      // are we active already?
+	offFrom int       // if we say the end condition, what line was it on?
+}
+
+func newTwoCond(c1 condition, c2 condition, loc int) instruction {
+   return &cmd_twocond{c1,c2,loc,false,0}
+}
+
+func (c *cmd_twocond) run(e *engine) error {
+	if c.isOn && (c.offFrom > 0) && (c.offFrom < e.lineno) {
+		c.isOn = false
+		c.offFrom = 0
+	}
+
+	if !c.isOn {
+		if c.start.isMet(e) {
+			e.ip++
+			c.isOn = true
+		} else {
+			e.ip = c.loc
+		}
+	} else {
+		if (c.offFrom == e.lineno) || (c.end.isMet(e)) {
+			c.offFrom = e.lineno
+		}
+		e.ip++
+	}
+	return nil
+}
