@@ -88,30 +88,36 @@ func (_ cmd_fillnext) run(e *engine) error {
 
 // --------------------------------------------------
 type cmd_simplecond struct {
-	cond condition // the condition to check
-	loc  int       // where to jump if the condition is not met
+	cond     condition // the condition to check
+	metloc   int       // where to jump if the condition is met
+	unmetloc int       // where to jump if the condition is not met
 }
 
 func (c *cmd_simplecond) run(e *engine) error {
 	if c.cond.isMet(e) {
-		e.ip++
+		e.ip = c.metloc
 	} else {
-		e.ip = c.loc
+		e.ip = c.unmetloc
 	}
 	return nil
 }
 
-// --------------------------------------------------
-type cmd_twocond struct {
-	start   condition // the condition that begines the block
-	end     condition // the condition that ends the block
-	loc     int       // where to jump if the condition is not met
-	isOn    bool      // are we active already?
-	offFrom int       // if we say the end condition, what line was it on?
+func (c *cmd_simplecond) invert() {
+	c.metloc, c.unmetloc = c.unmetloc, c.metloc
 }
 
-func newTwoCond(c1 condition, c2 condition, loc int) instruction {
-	return &cmd_twocond{c1, c2, loc, false, 0}
+// --------------------------------------------------
+type cmd_twocond struct {
+	start    condition // the condition that begines the block
+	end      condition // the condition that ends the block
+	metloc   int       // where to jump if the condition is met
+	unmetloc int       // where to jump if the condition is not met
+	isOn     bool      // are we active already?
+	offFrom  int       // if we say the end condition, what line was it on?
+}
+
+func newTwoCond(c1 condition, c2 condition, metloc int, unmetloc int) instruction {
+	return &cmd_twocond{c1, c2, metloc, unmetloc, false, 0}
 }
 
 func (c *cmd_twocond) run(e *engine) error {
@@ -122,16 +128,20 @@ func (c *cmd_twocond) run(e *engine) error {
 
 	if !c.isOn {
 		if c.start.isMet(e) {
-			e.ip++
+			e.ip = c.metloc
 			c.isOn = true
 		} else {
-			e.ip = c.loc
+			e.ip = c.unmetloc
 		}
 	} else {
 		if (c.offFrom == e.lineno) || (c.end.isMet(e)) {
 			c.offFrom = e.lineno
 		}
-		e.ip++
+		e.ip = c.metloc
 	}
 	return nil
+}
+
+func (c *cmd_twocond) invert() {
+	c.metloc, c.unmetloc = c.unmetloc, c.metloc
 }
