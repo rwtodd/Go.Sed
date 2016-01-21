@@ -9,28 +9,16 @@ To be written.
 
 ## Status
 
-It is early in the development.  As of now, the instructions to run are hard-coded for `sed -n`:
-
-    $ d 
-    8,11 {
-       =
-       p
-    }
-    /import/, /^\)/ d
-    p
-
-... which doesn't look impressive, but it illustrates that the basic engine
-is working.  I also support inverted conditions, like:
-
-   8,11 !d
+It is early in the development.  There is a basic engine in place, which can run
+a few of the commands.  The lexer is coming along, and it can parse all of the common
+commands.  I still need to do the 'y' command, but that may be all that's missing.
 
 
 ## Next Steps
 
-The most important missing piece is a lexer/parser for the sed commands. Right now,
-the test program is hard-coded in main.go.
+The most important missing piece is a parser for the lex'ed tokens. 
 
-After that, I'll need to add the missing commands (importantly, s// isn't implemented yet!).
+After that, I'll need to add code to run the missing commands.
 
 
 ## Go Get
