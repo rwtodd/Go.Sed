@@ -22,6 +22,10 @@ type location struct {
 	pos  int
 }
 
+func (l *location) String() string {
+	return fmt.Sprintf("at line %d, pos %d", l.line, l.pos)
+}
+
 const (
 	TOK_NUM = iota
 	TOK_RX
@@ -36,7 +40,7 @@ const (
 
 type token struct {
 	location
-	tok  int
+	typ  int
 	args []string
 }
 

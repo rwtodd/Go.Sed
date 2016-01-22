@@ -5,18 +5,22 @@ An implementation of sed in Go.  Just because!
 
 ## Implementation Notes
 
-To be written.
+I have never looked at how a "real" implementation of sed is done. I'm just
+going by the sed man pages and tutorials.  I will describe this implementation
+in this space soon.  To be written.
 
 ## Status
 
 It is early in the development.  There is a basic engine in place, which can run
-a few of the commands.  The lexer is coming along, and it can parse all of the common
-commands.  I still need to do the 'y' command, but that may be all that's missing.
+a few of the commands.  The lexer is almost complete (missing the 'y' command).
+The parser is just now under development. It can only parse a few commands. That's
+what I'm working on now.
 
 
 ## Next Steps
 
-The most important missing piece is a parser for the lex'ed tokens. 
+Finish the parser/compiler from tokens to instructions for the execution
+engine.
 
 After that, I'll need to add code to run the missing commands.
 

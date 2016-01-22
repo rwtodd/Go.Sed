@@ -34,6 +34,24 @@ func (_ cmd_swap) run(e *engine) error {
 }
 
 // ---------------------------------------------------
+type cmd_hold struct{}
+
+func (_ cmd_hold) run(e *engine) error {
+	e.hold = e.pat
+	e.ip++
+	return nil
+}
+
+// ---------------------------------------------------
+type cmd_holdapp struct{}
+
+func (_ cmd_holdapp) run(e *engine) error {
+	e.hold += e.pat
+	e.ip++
+	return nil
+}
+
+// ---------------------------------------------------
 type cmd_branch struct {
 	target int
 }
