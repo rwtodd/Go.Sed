@@ -19,9 +19,7 @@ type engine struct {
 }
 
 // a sed instruction is mostly a function transforming an engine
-type instruction interface {
-	run(e *engine) error
-}
+type instruction func(*engine) error
 
 // Run executes the instructions until we hit an error.  The most
 // common "error" will be io.EOF, which we will translate to nil
@@ -29,12 +27,12 @@ func run(e *engine) error {
 	var err error
 
 	// prime the engine by filling nxtl... roll back the IP and lineno
-	err = cmd_fillnext{}.run(e)
+	err = cmd_fillnext(e)
 	e.ip = 0
 	e.lineno = 0
 
 	for err == nil {
-		err = e.ins[e.ip].run(e)
+		err = e.ins[e.ip](e)
 	}
 
 	if err == io.EOF {

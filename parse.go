@@ -9,10 +9,12 @@ import (
 // these functions parse the lex'ed tokens (lex.go) and
 // build a program for the engine (engine.go) to run.
 
+var zeroBranch = cmd_newBranch(0)
+
 type waitingBranch struct {
-	target *int      // location to store the branch target
-	label  string    // the target label
-	loc    *location // the original parse location
+	ip    int       // address of the branch to fix up
+	label string    // the target label
+	loc   *location // the original parse location
 }
 
 const (
@@ -20,37 +22,38 @@ const (
 )
 
 type parseState struct {
-	toks       <-chan *token   // our input
-	ins        []instruction   // the compiled instructions
-	branches   []waitingBranch // references to fix up
-	labels     map[string]int  // the label locations
-	blockLevel int             // how deeply nested are our blocks?
-	err        error           // record any errors we encounter
+	toks       <-chan *token          // our input
+	ins        []instruction          // the compiled instructions
+	branches   []waitingBranch        // references to fix up
+	labels     map[string]instruction // named label branches
+	blockLevel int                    // how deeply nested are our blocks?
+	err        error                  // record any errors we encounter
 }
 
 func parse(input <-chan *token) ([]instruction, error) {
-	ps := &parseState{toks: input, labels: make(map[string]int)}
+	ps := &parseState{toks: input, labels: make(map[string]instruction)}
 
-	ps.ins = append(ps.ins, cmd_fillnext{})
+	ps.ins = append(ps.ins, cmd_fillnext)
 	parse_toplevel(ps)
 	if ps.blockLevel > 0 {
 		ps.err = fmt.Errorf("It looks like you are missing a closing brace!")
 	}
-	ps.labels[END_OF_PROGRAM_LABEL] = len(ps.ins)
-	ps.ins = append(ps.ins, cmd_print{}, &cmd_branch{0})
+	ps.labels[END_OF_PROGRAM_LABEL] = cmd_newBranch(len(ps.ins))
+	ps.ins = append(ps.ins, cmd_print, zeroBranch)
 	parse_resolveBranches(ps)
 
 	return ps.ins, ps.err
 }
 
 func parse_resolveBranches(ps *parseState) {
-	for _, val := range ps.branches {
-		var ok bool
-		*val.target, ok = ps.labels[val.label]
+	b := ps.branches
+	for idx := range b {
+		ins, ok := ps.labels[b[idx].label]
 		if !ok {
-			ps.err = fmt.Errorf("unknown label %s %v", val.label, val.loc)
+			ps.err = fmt.Errorf("unknown label %s %v", b[idx].label, b[idx].loc)
 			break
 		}
+		ps.ins[b[idx].ip] = ins
 	}
 }
 
@@ -119,12 +122,12 @@ func compile_cond(ps *parseState, c condition) {
 			return
 		}
 		sc := &cmd_simplecond{c, 0, len(ps.ins) + 1}
-		ps.ins = append(ps.ins, sc)
+		ps.ins = append(ps.ins, sc.run)
 		compile_block(ps, tok)
 		sc.metloc = len(ps.ins)
 	default:
 		sc := &cmd_simplecond{c, len(ps.ins) + 1, 0}
-		ps.ins = append(ps.ins, sc)
+		ps.ins = append(ps.ins, sc.run)
 		compile_block(ps, tok)
 		sc.unmetloc = len(ps.ins)
 	}
@@ -180,12 +183,12 @@ func compile_twocond(ps *parseState, c1 condition) {
 			return
 		}
 		tc := newTwoCond(c1, c2, 0, len(ps.ins)+1)
-		ps.ins = append(ps.ins, tc)
+		ps.ins = append(ps.ins, tc.run)
 		compile_block(ps, tok)
 		tc.metloc = len(ps.ins)
 	default:
 		tc := newTwoCond(c1, c2, len(ps.ins)+1, 0)
-		ps.ins = append(ps.ins, tc)
+		ps.ins = append(ps.ins, tc.run)
 		compile_block(ps, tok)
 		tc.unmetloc = len(ps.ins)
 	}
@@ -211,33 +214,32 @@ func compile_block(ps *parseState, cmd *token) {
 func compile_cmd(ps *parseState, cmd *token) {
 	switch cmd.args[0][0] {
 	case '=':
-		ps.ins = append(ps.ins, cmd_lineno{})
+		ps.ins = append(ps.ins, cmd_lineno)
 	case 'H':
-		ps.ins = append(ps.ins, cmd_holdapp{})
+		ps.ins = append(ps.ins, cmd_holdapp)
 	case 'b':
-		b := &cmd_branch{}
-		ps.ins = append(ps.ins, b)
-		compile_branchTarget(ps, &b.target, cmd)
+		compile_branchTarget(ps, len(ps.ins), cmd)
+		ps.ins = append(ps.ins, zeroBranch) // placeholder
 	case 'd':
-		ps.ins = append(ps.ins, &cmd_branch{0})
+		ps.ins = append(ps.ins, zeroBranch)
 	case 'h':
-		ps.ins = append(ps.ins, cmd_hold{})
+		ps.ins = append(ps.ins, cmd_hold)
 	case 'p':
-		ps.ins = append(ps.ins, cmd_print{})
+		ps.ins = append(ps.ins, cmd_print)
 	case 't':
 		panic("t not supported")
 	case 'x':
-		ps.ins = append(ps.ins, cmd_swap{})
+		ps.ins = append(ps.ins, cmd_swap)
 	}
 }
 
-func compile_branchTarget(ps *parseState, tgt *int, cmd *token) {
+func compile_branchTarget(ps *parseState, ip int, cmd *token) {
 	label := cmd.args[1]
 	if len(label) == 0 {
 		label = END_OF_PROGRAM_LABEL
 	}
 
-	ps.branches = append(ps.branches, waitingBranch{tgt, label, &cmd.location})
+	ps.branches = append(ps.branches, waitingBranch{ip, label, &cmd.location})
 }
 
 func compile_label(ps *parseState, lbl *token) {
@@ -247,6 +249,8 @@ func compile_label(ps *parseState, lbl *token) {
 		return
 	}
 
-	ps.labels[name] = len(ps.ins) // point to the end of
-	// the instruction stream
+	// store a branch instruction to jump to the current location.
+	// They will be inserted into the instruction stream in
+	// the parse_resolveBranches function.
+	ps.labels[name] = cmd_newBranch(len(ps.ins))
 }

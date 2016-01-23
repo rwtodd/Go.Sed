@@ -25,27 +25,21 @@ import (
 //      fill_next ; { pgm } ; branch(0)
 
 // ---------------------------------------------------
-type cmd_swap struct{}
-
-func (_ cmd_swap) run(e *engine) error {
+func cmd_swap(e *engine) error {
 	e.pat, e.hold = e.hold, e.pat
 	e.ip++
 	return nil
 }
 
 // ---------------------------------------------------
-type cmd_hold struct{}
-
-func (_ cmd_hold) run(e *engine) error {
+func cmd_hold(e *engine) error {
 	e.hold = e.pat
 	e.ip++
 	return nil
 }
 
 // ---------------------------------------------------
-type cmd_holdapp struct{}
-
-func (_ cmd_holdapp) run(e *engine) error {
+func cmd_holdapp(e *engine) error {
 	// FIXME make this more performant one day
 	if len(e.hold) > 0 {
 		e.hold += "\n"
@@ -56,19 +50,17 @@ func (_ cmd_holdapp) run(e *engine) error {
 }
 
 // ---------------------------------------------------
-type cmd_branch struct {
-	target int
-}
-
-func (b *cmd_branch) run(e *engine) error {
-	e.ip = b.target
-	return nil
+// newBranch generates branch instructions with specific
+// targets
+func cmd_newBranch(target int) instruction {
+	return func(e *engine) error {
+		e.ip = target
+		return nil
+	}
 }
 
 // ---------------------------------------------------
-type cmd_print struct{}
-
-func (_ cmd_print) run(e *engine) error {
+func cmd_print(e *engine) error {
 	e.ip++
 	_, err := e.output.WriteString(e.pat)
 	if err == nil {
@@ -78,9 +70,7 @@ func (_ cmd_print) run(e *engine) error {
 }
 
 // ---------------------------------------------------
-type cmd_lineno struct{}
-
-func (_ cmd_lineno) run(e *engine) error {
+func cmd_lineno(e *engine) error {
 	e.ip++
 	var lineno = fmt.Sprintf("%d\n", e.lineno)
 	_, err := e.output.WriteString(lineno)
@@ -88,9 +78,7 @@ func (_ cmd_lineno) run(e *engine) error {
 }
 
 // ---------------------------------------------------
-type cmd_fillnext struct{}
-
-func (_ cmd_fillnext) run(e *engine) error {
+func cmd_fillnext(e *engine) error {
 	if e.lastl {
 		return io.EOF
 	}
