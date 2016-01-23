@@ -141,10 +141,6 @@ func (c *cmd_simplecond) run(e *engine) error {
 	return nil
 }
 
-func (c *cmd_simplecond) invert() {
-	c.metloc, c.unmetloc = c.unmetloc, c.metloc
-}
-
 // --------------------------------------------------
 type cmd_twocond struct {
 	start    condition // the condition that begines the block
@@ -155,7 +151,7 @@ type cmd_twocond struct {
 	offFrom  int       // if we say the end condition, what line was it on?
 }
 
-func newTwoCond(c1 condition, c2 condition, metloc int, unmetloc int) instruction {
+func newTwoCond(c1 condition, c2 condition, metloc int, unmetloc int) *cmd_twocond {
 	return &cmd_twocond{c1, c2, metloc, unmetloc, false, 0}
 }
 
@@ -179,8 +175,4 @@ func (c *cmd_twocond) run(e *engine) error {
 		e.ip = c.metloc
 	}
 	return nil
-}
-
-func (c *cmd_twocond) invert() {
-	c.metloc, c.unmetloc = c.unmetloc, c.metloc
 }

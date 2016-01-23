@@ -108,7 +108,7 @@ func compile_cond(ps *parseState, c condition) {
 
 	switch tok.typ {
 	case TOK_COMMA:
-		panic("Unhandled comma.")
+		compile_twocond(ps, c)
 	case TOK_BANG:
 		tok, ok = mustGetToken(ps)
 		if !ok {
@@ -123,6 +123,67 @@ func compile_cond(ps *parseState, c condition) {
 		ps.ins = append(ps.ins, sc)
 		compile_block(ps, tok)
 		sc.unmetloc = len(ps.ins)
+	}
+}
+
+// compile_twocond operates when we have a comma-separated
+// pair of conditions, and we are expecting to read the second
+// condition next.
+func compile_twocond(ps *parseState, c1 condition) {
+	tok, ok := mustGetToken(ps)
+	if !ok {
+		return
+	}
+
+	var c2 condition
+
+	switch tok.typ {
+	case TOK_NUM:
+		n, err := strconv.Atoi(tok.args[0])
+		if err != nil {
+			ps.err = fmt.Errorf("Bad number <%s> %v", tok.args[0], &tok.location)
+			break
+		}
+		c2 = numbercond(n)
+	case TOK_DOLLAR:
+		c2 = eofcond{}
+	case TOK_RX:
+		rx, err := regexp.Compile(tok.args[0])
+		if err != nil {
+			ps.err = fmt.Errorf("Bad regexp %v", &tok.location)
+			break
+		}
+		c2 = &regexpcond{rx}
+	default:
+		ps.err = fmt.Errorf("Expected a second condition after comma %v", &tok.location)
+	}
+
+	if ps.err != nil {
+		return
+	}
+
+	// now, we need to get the next token to determine if we're inverting
+	// the condition...
+	tok, ok = mustGetToken(ps)
+	if !ok {
+		return
+	}
+
+	switch tok.typ {
+	case TOK_BANG:
+		tok, ok = mustGetToken(ps)
+		if !ok {
+			return
+		}
+		tc := newTwoCond(c1, c2, 0, len(ps.ins)+1)
+		ps.ins = append(ps.ins, tc)
+		compile_block(ps, tok)
+		tc.metloc = len(ps.ins)
+	default:
+		tc := newTwoCond(c1, c2, len(ps.ins)+1, 0)
+		ps.ins = append(ps.ins, tc)
+		compile_block(ps, tok)
+		tc.unmetloc = len(ps.ins)
 	}
 }
 
