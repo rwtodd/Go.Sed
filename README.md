@@ -13,17 +13,15 @@ in this space soon.  To be written.
 
 It is early in the development.  There is a basic engine in place, which can run
 a few of the commands.  The lexer is almost complete (missing the 'y' command).
-The parser is just now under development. It can only parse a few commands. That's
-what I'm working on now.
+The parser is pretty much working now.
 
 
 ## Next Steps
 
-Finish the parser/compiler from tokens to instructions for the execution
-engine.
+Add code to run the missing commands (notably I need to code the 's'ubstitution command).
 
-After that, I'll need to add code to run the missing commands.
-
+Also, right now it looks for a hard-coded 'program.sed', and doesn't yet support options
+like '-e' or '-n'.  I'll need to add those soon.
 
 ## Go Get
 
