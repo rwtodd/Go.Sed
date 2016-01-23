@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 )
 
@@ -65,6 +66,13 @@ func parse_toplevel(ps *parseState) {
 			compile_cond(ps, numbercond(n))
 		case TOK_DOLLAR:
 			compile_cond(ps, eofcond{})
+		case TOK_RX:
+			rx, err := regexp.Compile(tok.args[0])
+			if err != nil {
+				ps.err = fmt.Errorf("Bad regexp %v", &tok.location)
+				break
+			}
+			compile_cond(ps, &regexpcond{rx})
 		case TOK_EOL:
 			// top level empty lines are OK
 		case TOK_RBRACE:
