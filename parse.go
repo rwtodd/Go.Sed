@@ -33,12 +33,16 @@ func parse(input <-chan *token) ([]instruction, error) {
 
 	ps.ins = append(ps.ins, cmd_fillnext{})
 	parse_toplevel(ps)
+	if ps.blockLevel > 0 {
+		ps.err = fmt.Errorf("It looks like you are missing a closing brace!")
+	}
 	ps.labels[END_OF_PROGRAM_LABEL] = len(ps.ins)
 	ps.ins = append(ps.ins, cmd_print{}, &cmd_branch{0})
 	parse_resolveBranches(ps)
 
 	return ps.ins, ps.err
 }
+
 func parse_resolveBranches(ps *parseState) {
 	for _, val := range ps.branches {
 		var ok bool
