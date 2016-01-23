@@ -47,7 +47,9 @@ type cmd_holdapp struct{}
 
 func (_ cmd_holdapp) run(e *engine) error {
 	// FIXME make this more performant one day
-	e.hold += "\n"
+	if len(e.hold) > 0 {
+		e.hold += "\n"
+	}
 	e.hold += e.pat
 	e.ip++
 	return nil
