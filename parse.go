@@ -35,9 +35,15 @@ func parse(input <-chan *token) ([]instruction, error) {
 
 	ps.ins = append(ps.ins, cmd_fillnext)
 	parse_toplevel(ps)
-	if ps.blockLevel > 0 {
+	if ps.err == nil && ps.blockLevel > 0 {
 		ps.err = fmt.Errorf("It looks like you are missing a closing brace!")
 	}
+
+	// if the parsing failed in some way, just give up now
+	if ps.err != nil {
+		return nil, ps.err
+	}
+
 	ps.labels[END_OF_PROGRAM_LABEL] = cmd_newBranch(len(ps.ins))
 	ps.ins = append(ps.ins, cmd_print, zeroBranch)
 	parse_resolveBranches(ps)
@@ -226,6 +232,13 @@ func compile_cmd(ps *parseState, cmd *token) {
 		ps.ins = append(ps.ins, cmd_hold)
 	case 'p':
 		ps.ins = append(ps.ins, cmd_print)
+	case 's':
+		subst, err := newSubstitution(cmd.args[1], cmd.args[2], cmd.args[3])
+		if err != nil {
+			ps.err = fmt.Errorf("Substitution error: %s %v", err.Error(), &cmd.location)
+			break
+		}
+		ps.ins = append(ps.ins, subst)
 	case 't':
 		panic("t not supported")
 	case 'x':
