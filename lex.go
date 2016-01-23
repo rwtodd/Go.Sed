@@ -31,6 +31,7 @@ const (
 	TOK_RX
 	TOK_COMMA
 	TOK_BANG
+	TOK_DOLLAR
 	TOK_LBRACE
 	TOK_RBRACE
 	TOK_EOL
@@ -227,6 +228,8 @@ func lex(r io.RuneScanner, ch chan *token) {
 			var rx string
 			rx, err = readDelimited(&rdr, '/')
 			ch <- &token{rdr.location, TOK_RX, []string{rx}}
+		case cur == '$':
+			ch <- &token{rdr.location, TOK_DOLLAR, nil}
 		case cur == ':':
 			var label string
 			label, err = readIdentifier(&rdr)

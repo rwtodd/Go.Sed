@@ -12,16 +12,16 @@ type waitingBranch struct {
 }
 
 const (
-	END_OF_PROGRAM_LABEL = "the end"
+	END_OF_PROGRAM_LABEL = "the end" // has a space... no conflicts with user labels
 )
 
 type parseState struct {
-	toks      <-chan *token   // our input
-	ins       []instruction   // the compiled instructions
-	branches  []waitingBranch // references to fix up
-	labels    map[string]int  // the label locations
-	condstack []*int          // stack of condition locations to fix up
-	err       error           // record any errors we encounter
+	toks       <-chan *token   // our input
+	ins        []instruction   // the compiled instructions
+	branches   []waitingBranch // references to fix up
+	labels     map[string]int  // the label locations
+	blockLevel int             // how deeply nested are our blocks?
+	err        error           // record any errors we encounter
 }
 
 func parse(input <-chan *token) ([]instruction, error) {
@@ -53,8 +53,18 @@ func parse_toplevel(ps *parseState) {
 			compile_cmd(ps, tok)
 		case TOK_LABEL:
 			compile_label(ps, tok)
+		case TOK_DOLLAR:
+			compile_cond(ps, eofcond{})
 		case TOK_EOL:
 			// top level empty lines are OK
+		case TOK_RBRACE:
+			if ps.blockLevel == 0 {
+				ps.err = fmt.Errorf("Unexpected brace %v", &tok.location)
+			}
+			ps.blockLevel--
+			return
+		default:
+			ps.err = fmt.Errorf("Unexpected token %v", &tok.location)
 		}
 		if ps.err != nil {
 			break
@@ -62,6 +72,59 @@ func parse_toplevel(ps *parseState) {
 	}
 }
 
+func mustGetToken(ps *parseState) (t *token, ok bool) {
+	t, ok = <-ps.toks
+	if !ok {
+		ps.err = fmt.Errorf("Unexpected end of script!")
+	}
+	return
+}
+
+// compile_cond operates when we see a condition. It looks for
+// a closing condition and an inverter '!'
+func compile_cond(ps *parseState, c condition) {
+	tok, ok := mustGetToken(ps)
+	if !ok {
+		return
+	}
+
+	switch tok.typ {
+	case TOK_COMMA:
+		panic("Unhandled comma.")
+	case TOK_BANG:
+		tok, ok = mustGetToken(ps)
+		if !ok {
+			return
+		}
+		sc := &cmd_simplecond{c, 0, len(ps.ins) + 1}
+		ps.ins = append(ps.ins, sc)
+		compile_block(ps, tok)
+		sc.metloc = len(ps.ins)
+	default:
+		sc := &cmd_simplecond{c, len(ps.ins) + 1, 0}
+		ps.ins = append(ps.ins, sc)
+		compile_block(ps, tok)
+		sc.unmetloc = len(ps.ins)
+	}
+}
+
+// compile_block parses a top-level block if it gets a
+// LBRACE, or parses a single CMD as a block otherwise.
+// Anything other than LBRACE or CMD is not allowed here.
+func compile_block(ps *parseState, cmd *token) {
+	switch cmd.typ {
+	case TOK_LBRACE:
+		ps.blockLevel++
+		parse_toplevel(ps)
+	case TOK_CMD:
+		compile_cmd(ps, cmd)
+	default:
+		ps.err = fmt.Errorf("Unexpected token %v", &cmd.location)
+	}
+}
+
+// compile_cmd compiles the individual sed commands
+// into instructions.
 func compile_cmd(ps *parseState, cmd *token) {
 	switch cmd.args[0][0] {
 	case 'H':
