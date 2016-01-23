@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // these functions parse the lex'ed tokens (lex.go) and
 // build a program for the engine (engine.go) to run.
@@ -53,6 +56,13 @@ func parse_toplevel(ps *parseState) {
 			compile_cmd(ps, tok)
 		case TOK_LABEL:
 			compile_label(ps, tok)
+		case TOK_NUM:
+			n, err := strconv.Atoi(tok.args[0])
+			if err != nil {
+				ps.err = fmt.Errorf("Bad number <%s> %v", tok.args[0], &tok.location)
+				break
+			}
+			compile_cond(ps, numbercond(n))
 		case TOK_DOLLAR:
 			compile_cond(ps, eofcond{})
 		case TOK_EOL:
