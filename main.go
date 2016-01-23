@@ -11,7 +11,7 @@ func main() {
 	fl, _ := os.Open("program.sed")
 	program := bufio.NewReader(fl)
 
-	ch := make(chan *token)
+	ch := make(chan *token, 128)
 	go lex(program, ch)
 
 	instructions, err := parse(ch)
