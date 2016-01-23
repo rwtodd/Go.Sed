@@ -46,6 +46,8 @@ func (_ cmd_hold) run(e *engine) error {
 type cmd_holdapp struct{}
 
 func (_ cmd_holdapp) run(e *engine) error {
+	// FIXME make this more performant one day
+	e.hold += "\n"
 	e.hold += e.pat
 	e.ip++
 	return nil
@@ -67,6 +69,9 @@ type cmd_print struct{}
 func (_ cmd_print) run(e *engine) error {
 	e.ip++
 	_, err := e.output.WriteString(e.pat)
+	if err == nil {
+		err = e.output.WriteByte('\n')
+	}
 	return err
 }
 
@@ -92,8 +97,22 @@ func (_ cmd_fillnext) run(e *engine) error {
 	e.pat = e.nxtl
 	e.lineno++
 
+	e.nxtl = ""
+
+	var prefix = true
 	var err error
-	e.nxtl, err = e.input.ReadString('\n')
+	var line []byte
+
+	for prefix {
+		line, prefix, err = e.input.ReadLine()
+		if err != nil {
+			break
+		}
+		buf := make([]byte, len(line))
+		copy(buf, line)
+		e.nxtl += string(buf)
+	}
+
 	if err == io.EOF {
 		if len(e.nxtl) == 0 {
 			e.lastl = true

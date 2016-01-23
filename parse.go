@@ -145,6 +145,8 @@ func compile_block(ps *parseState, cmd *token) {
 // into instructions.
 func compile_cmd(ps *parseState, cmd *token) {
 	switch cmd.args[0][0] {
+	case '=':
+		ps.ins = append(ps.ins, cmd_lineno{})
 	case 'H':
 		ps.ins = append(ps.ins, cmd_holdapp{})
 	case 'b':
