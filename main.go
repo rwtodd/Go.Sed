@@ -88,6 +88,9 @@ func main() {
 			err = run(&eng)
 
 			fl.Close()
+			if err != nil {
+				break
+			}
 		}
 	}
 
