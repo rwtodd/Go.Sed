@@ -45,7 +45,10 @@ func parse(input <-chan *token) ([]instruction, error) {
 	}
 
 	ps.labels[END_OF_PROGRAM_LABEL] = cmd_newBranch(len(ps.ins))
-	ps.ins = append(ps.ins, cmd_print, zeroBranch)
+	if !noPrint {
+		ps.ins = append(ps.ins, cmd_print)
+	}
+	ps.ins = append(ps.ins, zeroBranch)
 	parse_resolveBranches(ps)
 
 	return ps.ins, ps.err
