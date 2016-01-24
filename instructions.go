@@ -41,11 +41,18 @@ func cmd_hold(e *engine) error {
 
 // ---------------------------------------------------
 func cmd_holdapp(e *engine) error {
-	// FIXME make this more performant one day
-	if len(e.hold) > 0 {
-		e.hold += "\n"
+	var lines = make([]string, 0, 2)
+
+	if e.hold != nil {
+		lines = append(lines, *e.hold)
 	}
-	e.hold += e.pat
+	if e.pat != nil {
+		lines = append(lines, *e.pat)
+	}
+
+	newhold := strings.Join(lines, "\n")
+	e.hold = &newhold
+
 	e.ip++
 	return nil
 }
@@ -61,11 +68,16 @@ func cmd_newBranch(target int) instruction {
 }
 
 // ---------------------------------------------------
-func cmd_print(e *engine) error {
+func cmd_print(e *engine) (err error) {
 	e.ip++
-	_, err := e.output.WriteString(e.pat)
-	if err == nil {
-		err = e.output.WriteByte('\n')
+
+	// FIXME check if real sed puts a newline when pattern space is empty
+	//   like   " g ; p "
+	if e.pat != nil {
+		_, err = e.output.WriteString(*e.pat)
+		if err == nil {
+			err = e.output.WriteByte('\n')
+		}
 	}
 	return err
 }
@@ -85,7 +97,9 @@ func cmd_fillnext(e *engine) error {
 	}
 
 	e.ip++
-	e.pat = e.nxtl
+
+	patstring := e.nxtl // make a copy
+	e.pat = &patstring
 	e.lineno++
 
 	var prefix = true

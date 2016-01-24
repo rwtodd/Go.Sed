@@ -8,9 +8,10 @@ import (
 // engine is the main program state
 type engine struct {
 	nxtl   string        // the next line
+	pat    *string       // the pattern space, possibly nil
+	hold   *string       // the hold buffer,   possibly nil
+	appl   *string       // any lines we've been asked to 'a\'ppend, usually nil
 	lastl  bool          // true if it's the last line
-	pat    string        // the pattern space
-	hold   string        // the hold buffer
 	ins    []instruction // the instruction stream
 	ip     int           // the current locaiton in the instruction stream
 	input  *bufio.Reader // the input stream

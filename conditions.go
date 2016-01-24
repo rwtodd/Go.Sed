@@ -32,8 +32,11 @@ type regexpcond struct {
 	re *regexp.Regexp // for matching regexp conditions
 }
 
-func (r *regexpcond) isMet(e *engine) bool {
-	return r.re.MatchString(e.pat)
+func (r *regexpcond) isMet(e *engine) (answer bool) {
+	if e.pat != nil {
+		answer = r.re.MatchString(*e.pat)
+	}
+	return
 }
 
 func newRECondition(s string) (*regexpcond, error) {

@@ -20,7 +20,11 @@ type substitute struct {
 
 func (s *substitute) run(e *engine) (err error) {
 	e.ip++
-	matches := s.pattern.FindAllStringSubmatchIndex(e.pat, -1)
+	if e.pat == nil {
+		return
+	}
+
+	matches := s.pattern.FindAllStringSubmatchIndex(*e.pat, -1)
 	if matches == nil {
 		return
 	}
@@ -43,7 +47,8 @@ func (s *substitute) run(e *engine) (err error) {
 	}
 
 	if len(matches) > 0 {
-		e.pat = subst_replaceAll(e.pat, s, matches)
+		var newpat = subst_replaceAll(*e.pat, s, matches)
+		e.pat = &newpat
 		if s.pflag {
 			err = cmd_print(e)
 			e.ip-- // roll back ip from the print command
