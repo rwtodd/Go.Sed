@@ -43,12 +43,8 @@ func compileScript(args *[]string) ([]instruction, error) {
 		defer fl.Close()
 		program = bufio.NewReader(fl)
 	case len(*args) > 0:
-		fl, err := os.Open((*args)[0])
-		if err != nil {
-			return nil, fmt.Errorf("Error opening %s: %v", (*args)[0], err)
-		}
-		defer fl.Close()
-		program = bufio.NewReader(fl)
+		// no -e or -f given, so the first argument is taken as the script to run
+		program = strings.NewReader((*args)[0])
 		*args = (*args)[1:]
 	}
 
