@@ -11,17 +11,17 @@ in this space soon.  To be written.
 
 ## Status
 
-It is early in the development.  There is a basic engine in place, which can run
-a few of the commands.  The lexer is almost complete (missing the 'y' command).
-The parser is pretty much working now.
+  * __Command-Line processing__:  Done. It accepts '-e', '-f', '-n' and long
+versions of the same. It takes '-help'.
+  * __Lexer__: Complete.
+  * __Parser/Engine__:  Has the common commands and conditions, but some are
+still missing.  I will be filling these in soon.
 
 
 ## Next Steps
 
-Add code to run the missing commands (notably I need to code the 's'ubstitution command).
+Add missing commands to the parser and execution engine.
 
-Also, right now it looks for a hard-coded 'program.sed', and doesn't yet support options
-like '-e' or '-n'.  I'll need to add those soon.
 
 ## Go Get
 
