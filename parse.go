@@ -195,6 +195,15 @@ func compile_twocond(ps *parseState, c1 condition) {
 		ps.ins = append(ps.ins, tc.run)
 		compile_block(ps, tok)
 		tc.metloc = len(ps.ins)
+	case TOK_CHANGE:
+		// special case for 2-condition change command...
+		// it has to be able to talk to the condition
+		// to know when it's the last line of the change
+		tc := newTwoCond(c1, c2, len(ps.ins)+1, 0)
+		ps.ins = append(ps.ins, tc.run)
+		c_cmd := &cmd_change{tc, tok.args[1]}
+		ps.ins = append(ps.ins, c_cmd.run)
+		tc.unmetloc = len(ps.ins)
 	default:
 		tc := newTwoCond(c1, c2, len(ps.ins)+1, 0)
 		ps.ins = append(ps.ins, tc.run)
@@ -211,7 +220,7 @@ func compile_block(ps *parseState, cmd *token) {
 	case TOK_LBRACE:
 		ps.blockLevel++
 		parse_toplevel(ps)
-	case TOK_CMD:
+	case TOK_CMD, TOK_CHANGE:
 		compile_cmd(ps, cmd)
 	default:
 		ps.err = fmt.Errorf("Unexpected token %v", &cmd.location)
@@ -229,6 +238,9 @@ func compile_cmd(ps *parseState, cmd *token) {
 	case 'b':
 		compile_branchTarget(ps, len(ps.ins), cmd)
 		ps.ins = append(ps.ins, zeroBranch) // placeholder
+	case 'c':
+		c_cmd := &cmd_change{nil, cmd.args[1]}
+		ps.ins = append(ps.ins, c_cmd.run)
 	case 'd':
 		ps.ins = append(ps.ins, zeroBranch)
 	case 'h':

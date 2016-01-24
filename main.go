@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 )
@@ -26,12 +25,12 @@ func init() {
 }
 
 func compileScript(args *[]string) ([]instruction, error) {
-	var program io.RuneScanner
+	var program *bufio.Reader
 
 	// STEP ONE: Find the script
 	switch {
 	case evalProg != "":
-		program = strings.NewReader(evalProg)
+		program = bufio.NewReader(strings.NewReader(evalProg))
 		if sedFile != "" {
 			return nil, fmt.Errorf("Cannot specify both an expression and a program file!")
 		}
@@ -44,7 +43,7 @@ func compileScript(args *[]string) ([]instruction, error) {
 		program = bufio.NewReader(fl)
 	case len(*args) > 0:
 		// no -e or -f given, so the first argument is taken as the script to run
-		program = strings.NewReader((*args)[0])
+		program = bufio.NewReader(strings.NewReader((*args)[0]))
 		*args = (*args)[1:]
 	}
 

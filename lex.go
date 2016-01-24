@@ -10,10 +10,12 @@ package main
 // by eliminating comments.
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode"
 )
 
@@ -36,6 +38,7 @@ const (
 	TOK_RBRACE
 	TOK_EOL
 	TOK_CMD
+	TOK_CHANGE
 	TOK_LABEL
 )
 
@@ -48,13 +51,13 @@ type token struct {
 // ----------------------------------------------------------
 //  Location-tracking reader
 // ----------------------------------------------------------
-type loc_reader struct {
+type locReader struct {
 	location
 	eol bool // state for end of line, true when last rune was '\n'
-	r   io.RuneScanner
+	r   *bufio.Reader
 }
 
-func (lr *loc_reader) ReadRune() (rune, int, error) {
+func (lr *locReader) ReadRune() (rune, int, error) {
 	r, i, err := lr.r.ReadRune()
 
 	lr.pos++
@@ -71,14 +74,39 @@ func (lr *loc_reader) ReadRune() (rune, int, error) {
 	return r, i, err
 }
 
-func (lr *loc_reader) UnreadRune() error {
+func (lr *locReader) UnreadRune() error {
 	return lr.r.UnreadRune()
+}
+
+func (lr *locReader) ReadLine() (nxtl string, err error) {
+	var prefix = true
+	var line []byte
+
+	var lines []string
+
+	for prefix {
+		line, prefix, err = lr.r.ReadLine()
+		if err != nil {
+			break
+		}
+		buf := make([]byte, len(line))
+		copy(buf, line)
+		lines = append(lines, string(buf))
+	}
+
+	nxtl = strings.Join(lines, "")
+
+	// fixup our position information
+	lr.pos += len(nxtl)
+	lr.eol = true
+
+	return
 }
 
 // ----------------------------------------------------------
 // lexer functions
 // ----------------------------------------------------------
-func skipComment(r io.RuneReader) (rune, error) {
+func skipComment(r *locReader) (rune, error) {
 	var err error
 	var cur rune = ' '
 	for (cur != '\n') && (err == nil) {
@@ -87,7 +115,7 @@ func skipComment(r io.RuneReader) (rune, error) {
 	return ';', err
 }
 
-func skipWS(r io.RuneReader) (rune, error) {
+func skipWS(r *locReader) (rune, error) {
 	var err error
 	var cur rune = ' '
 	for {
@@ -103,7 +131,7 @@ func skipWS(r io.RuneReader) (rune, error) {
 	}
 }
 
-func readNumber(r io.RuneScanner, character rune) (string, error) {
+func readNumber(r *locReader, character rune) (string, error) {
 	var buffer bytes.Buffer
 
 	var err error
@@ -123,7 +151,7 @@ func readNumber(r io.RuneScanner, character rune) (string, error) {
 // returning the string (not including the delimiter). It does
 // allow the delimiter to be escaped by a backslash ('\').
 // It is an error to reach EOL while looking for the delimiter.
-func readDelimited(r io.RuneScanner, delimiter rune) (string, error) {
+func readDelimited(r *locReader, delimiter rune) (string, error) {
 	var buffer bytes.Buffer
 
 	var err error
@@ -145,10 +173,49 @@ func readDelimited(r io.RuneScanner, delimiter rune) (string, error) {
 	return buffer.String(), err
 }
 
+// readMultiLine reads until it finds an unescaped newline. It discards the
+// first line, if it is empty, because commands like "c\", "a\" and "i\" are
+// intended to be used that way.
+func readMultiLine(r *locReader) (string, error) {
+	var lines []string
+	var err error
+
+	first := true
+	hasSlash := true // does the line end in a slash?
+
+	for hasSlash {
+		txt, err := r.ReadLine()
+		if err != nil {
+			break
+		}
+		tlen := len(txt)
+
+		// strip off the final '\', if there is one
+		if tlen > 0 && txt[tlen-1] == '\\' {
+			txt = txt[:tlen-1]
+		} else {
+			hasSlash = false
+		}
+
+		// If it's empty and the first line, forget it.
+		// Otherwise, add it to the line list
+		if !first || tlen > 1 {
+			lines = append(lines, txt)
+		}
+
+		first = false
+	}
+
+	// for sed's purposes, we want a final newline...
+	lines = append(lines, "")
+
+	return strings.Join(lines, "\n"), err
+}
+
 // readIdentifier skips any whitespace, and then reads until it
 // finds either a ';' or a non-alphanumeric character.  It
 // returns the string it reads.
-func readIdentifier(r io.RuneScanner) (string, error) {
+func readIdentifier(r *locReader) (string, error) {
 	var buffer bytes.Buffer
 
 	var err error
@@ -166,7 +233,7 @@ func readIdentifier(r io.RuneScanner) (string, error) {
 	return buffer.String(), err
 }
 
-func readSubstitution(r io.RuneScanner) ([]string, error) {
+func readSubstitution(r *locReader) ([]string, error) {
 	var ans = []string{"s"}
 	var err error
 
@@ -198,60 +265,73 @@ func readSubstitution(r io.RuneScanner) ([]string, error) {
 	return append(ans, part1, part2, mods), err
 }
 
-func lex(r io.RuneScanner, ch chan *token) {
+func lex(r *bufio.Reader, ch chan *token) {
 	defer close(ch)
 
-	rdr := loc_reader{}
+	rdr := locReader{}
 	rdr.r = r
 	rdr.eol = true
 
 	var err error
 	var cur rune
 
+	var topLoc = rdr.location
+
 	for err == nil {
 		cur, err = skipWS(&rdr)
 		if err != nil {
 			break
 		}
+
+		topLoc = rdr.location // remember the start of the command
+
 		switch {
 		case cur == ';':
-			ch <- &token{rdr.location, TOK_EOL, nil}
+			ch <- &token{topLoc, TOK_EOL, nil}
 		case cur == ',':
-			ch <- &token{rdr.location, TOK_COMMA, nil}
+			ch <- &token{topLoc, TOK_COMMA, nil}
 		case cur == '{':
-			ch <- &token{rdr.location, TOK_LBRACE, nil}
+			ch <- &token{topLoc, TOK_LBRACE, nil}
 		case cur == '}':
-			ch <- &token{rdr.location, TOK_RBRACE, nil}
+			ch <- &token{topLoc, TOK_RBRACE, nil}
 		case cur == '!':
-			ch <- &token{rdr.location, TOK_BANG, nil}
+			ch <- &token{topLoc, TOK_BANG, nil}
 		case cur == '/':
 			var rx string
 			rx, err = readDelimited(&rdr, '/')
-			ch <- &token{rdr.location, TOK_RX, []string{rx}}
+			ch <- &token{topLoc, TOK_RX, []string{rx}}
 		case cur == '$':
-			ch <- &token{rdr.location, TOK_DOLLAR, nil}
+			ch <- &token{topLoc, TOK_DOLLAR, nil}
 		case cur == ':':
 			var label string
 			label, err = readIdentifier(&rdr)
-			ch <- &token{rdr.location, TOK_LABEL, []string{label}}
+			ch <- &token{topLoc, TOK_LABEL, []string{label}}
 		case cur == 'b', cur == 't': // branches...
 			var label string
 			label, err = readIdentifier(&rdr)
-			ch <- &token{rdr.location, TOK_CMD, []string{string(cur), label}}
+			ch <- &token{topLoc, TOK_CMD, []string{string(cur), label}}
 		case cur == 's': // substitution
 			var args []string
 			args, err = readSubstitution(&rdr)
-			ch <- &token{rdr.location, TOK_CMD, args}
+			ch <- &token{topLoc, TOK_CMD, args}
+		case cur == 'c': // change
+			var txt string
+			txt, err = readMultiLine(&rdr)
+			ch <- &token{topLoc, TOK_CHANGE, []string{string(cur), txt}}
+		case cur == 'i', cur == 'a': // insert or append
+			var txt string
+			txt, err = readMultiLine(&rdr)
+			ch <- &token{topLoc, TOK_CMD, []string{string(cur), txt}}
 		case unicode.IsDigit(cur):
 			var num string
 			num, err = readNumber(&rdr, cur)
-			ch <- &token{rdr.location, TOK_NUM, []string{num}}
+			ch <- &token{topLoc, TOK_NUM, []string{num}}
 		default:
-			ch <- &token{rdr.location, TOK_CMD, []string{string(cur)}}
+			ch <- &token{topLoc, TOK_CMD, []string{string(cur)}}
 		}
 	}
 
 	if err != io.EOF {
-		fmt.Fprintf(os.Stderr, "Error reading... <%s> near <%+v>", err.Error(), rdr.location)
+		fmt.Fprintf(os.Stderr, "Error reading... <%s> near <%+v>", err.Error(), topLoc)
 	}
 }

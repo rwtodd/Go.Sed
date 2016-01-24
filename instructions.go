@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 // mapping: sed --> cmd
@@ -87,11 +88,11 @@ func cmd_fillnext(e *engine) error {
 	e.pat = e.nxtl
 	e.lineno++
 
-	e.nxtl = ""
-
 	var prefix = true
 	var err error
 	var line []byte
+
+	var lines []string
 
 	for prefix {
 		line, prefix, err = e.input.ReadLine()
@@ -100,8 +101,10 @@ func cmd_fillnext(e *engine) error {
 		}
 		buf := make([]byte, len(line))
 		copy(buf, line)
-		e.nxtl += string(buf)
+		lines = append(lines, string(buf))
 	}
+
+	e.nxtl = strings.Join(lines, "")
 
 	if err == io.EOF {
 		if len(e.nxtl) == 0 {
@@ -114,6 +117,7 @@ func cmd_fillnext(e *engine) error {
 }
 
 // --------------------------------------------------
+
 type cmd_simplecond struct {
 	cond     condition // the condition to check
 	metloc   int       // where to jump if the condition is met
@@ -136,11 +140,18 @@ type cmd_twocond struct {
 	metloc   int       // where to jump if the condition is met
 	unmetloc int       // where to jump if the condition is not met
 	isOn     bool      // are we active already?
-	offFrom  int       // if we say the end condition, what line was it on?
+	offFrom  int       // if we saw the end condition, what line was it on?
 }
 
 func newTwoCond(c1 condition, c2 condition, metloc int, unmetloc int) *cmd_twocond {
 	return &cmd_twocond{c1, c2, metloc, unmetloc, false, 0}
+}
+
+// isLastLine is here to support multi-line "c\" commands.
+// The command needs to know when it's the end of the
+// section so it can do the replacement.
+func (c *cmd_twocond) isLastLine(e *engine) bool {
+	return c.isOn && (c.offFrom == e.lineno)
 }
 
 func (c *cmd_twocond) run(e *engine) error {
@@ -157,10 +168,26 @@ func (c *cmd_twocond) run(e *engine) error {
 			e.ip = c.unmetloc
 		}
 	} else {
-		if (c.offFrom == e.lineno) || (c.end.isMet(e)) {
+		if c.end.isMet(e) {
 			c.offFrom = e.lineno
 		}
 		e.ip = c.metloc
 	}
 	return nil
+}
+
+// --------------------------------------------------
+type cmd_change struct {
+	guard *cmd_twocond
+	text  string
+}
+
+func (c *cmd_change) run(e *engine) error {
+	e.ip = 0 // go to the the next cycle
+
+	var err error
+	if (c.guard == nil) || c.guard.isLastLine(e) {
+		_, err = e.output.WriteString(c.text)
+	}
+	return err
 }
