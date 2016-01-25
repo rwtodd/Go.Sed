@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 )
 
@@ -36,7 +37,10 @@ func (r *regexpcond) isMet(e *engine) (answer bool) {
 	return r.re.MatchString(e.pat)
 }
 
-func newRECondition(s string) (*regexpcond, error) {
+func newRECondition(s string, loc *location) (*regexpcond, error) {
 	re, err := regexp.Compile(s)
+	if err != nil {
+		err = fmt.Errorf("Regexp Error:  %s %v", err.Error(), loc)
+	}
 	return &regexpcond{re}, err
 }

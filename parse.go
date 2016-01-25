@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 )
 
@@ -94,12 +93,12 @@ func parse_toplevel(ps *parseState) {
 		case TOK_DOLLAR:
 			compile_cond(ps, eofcond{})
 		case TOK_RX:
-			rx, err := regexp.Compile(tok.args[0])
-			if err != nil {
-				ps.err = fmt.Errorf("Bad regexp %v", &tok.location)
+			var rx condition
+			rx, ps.err = newRECondition(tok.args[0], &tok.location)
+			if ps.err != nil {
 				break
 			}
-			compile_cond(ps, &regexpcond{rx})
+			compile_cond(ps, rx)
 		case TOK_EOL:
 			// top level empty lines are OK
 		case TOK_RBRACE:
@@ -109,7 +108,7 @@ func parse_toplevel(ps *parseState) {
 			ps.blockLevel--
 			return
 		default:
-			ps.err = fmt.Errorf("Unexpected token %v", &tok.location)
+			ps.err = fmt.Errorf("Unexpected token '%c' %v", tok.letter, &tok.location)
 		}
 		if ps.err != nil {
 			break
@@ -175,12 +174,10 @@ func compile_twocond(ps *parseState, c1 condition) {
 	case TOK_DOLLAR:
 		c2 = eofcond{}
 	case TOK_RX:
-		rx, err := regexp.Compile(tok.args[0])
-		if err != nil {
-			ps.err = fmt.Errorf("Bad regexp %v", &tok.location)
+		c2, ps.err = newRECondition(tok.args[0], &tok.location)
+		if ps.err != nil {
 			break
 		}
-		c2 = &regexpcond{rx}
 	default:
 		ps.err = fmt.Errorf("Expected a second condition after comma %v", &tok.location)
 	}
@@ -232,7 +229,7 @@ func compile_block(ps *parseState, cmd *token) {
 	case TOK_CMD, TOK_CHANGE:
 		compile_cmd(ps, cmd)
 	default:
-		ps.err = fmt.Errorf("Unexpected token %v", &cmd.location)
+		ps.err = fmt.Errorf("Unexpected token '%c' at start of block  %v", cmd.letter, &cmd.location)
 	}
 }
 
