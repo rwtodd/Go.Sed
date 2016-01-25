@@ -33,10 +33,7 @@ type regexpcond struct {
 }
 
 func (r *regexpcond) isMet(e *engine) (answer bool) {
-	if e.pat != nil {
-		answer = r.re.MatchString(*e.pat)
-	}
-	return
+	return r.re.MatchString(e.pat)
 }
 
 func newRECondition(s string) (*regexpcond, error) {

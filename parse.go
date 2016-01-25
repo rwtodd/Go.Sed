@@ -201,7 +201,7 @@ func compile_twocond(ps *parseState, c1 condition) {
 		// to know when it's the last line of the change
 		tc := newTwoCond(c1, c2, len(ps.ins)+1, 0)
 		ps.ins = append(ps.ins, tc.run)
-		c_cmd := &cmd_change{tc, tok.args[1]}
+		c_cmd := &cmd_change{tc, tok.args[0]}
 		ps.ins = append(ps.ins, c_cmd.run)
 		tc.unmetloc = len(ps.ins)
 	default:
@@ -230,25 +230,38 @@ func compile_block(ps *parseState, cmd *token) {
 // compile_cmd compiles the individual sed commands
 // into instructions.
 func compile_cmd(ps *parseState, cmd *token) {
-	switch cmd.args[0][0] {
+	switch cmd.letter {
 	case '=':
 		ps.ins = append(ps.ins, cmd_lineno)
+	case 'G':
+		ps.ins = append(ps.ins, cmd_getapp)
 	case 'H':
 		ps.ins = append(ps.ins, cmd_holdapp)
+	case 'a':
+		ps.ins = append(ps.ins, cmd_newAppender(cmd.args[0]))
 	case 'b':
 		compile_branchTarget(ps, len(ps.ins), cmd)
 		ps.ins = append(ps.ins, zeroBranch) // placeholder
 	case 'c':
-		c_cmd := &cmd_change{nil, cmd.args[1]}
+		c_cmd := &cmd_change{nil, cmd.args[0]}
 		ps.ins = append(ps.ins, c_cmd.run)
 	case 'd':
 		ps.ins = append(ps.ins, zeroBranch)
+	case 'g':
+		ps.ins = append(ps.ins, cmd_get)
 	case 'h':
 		ps.ins = append(ps.ins, cmd_hold)
+	case 'i':
+		ps.ins = append(ps.ins, cmd_newInserter(cmd.args[0]))
+	case 'n':
+		if !noPrint {
+			ps.ins = append(ps.ins, cmd_print)
+		}
+		ps.ins = append(ps.ins, cmd_fillnext)
 	case 'p':
 		ps.ins = append(ps.ins, cmd_print)
 	case 's':
-		subst, err := newSubstitution(cmd.args[1], cmd.args[2], cmd.args[3])
+		subst, err := newSubstitution(cmd.args[0], cmd.args[1], cmd.args[2])
 		if err != nil {
 			ps.err = fmt.Errorf("Substitution error: %s %v", err.Error(), &cmd.location)
 			break
@@ -262,7 +275,7 @@ func compile_cmd(ps *parseState, cmd *token) {
 }
 
 func compile_branchTarget(ps *parseState, ip int, cmd *token) {
-	label := cmd.args[1]
+	label := cmd.args[0]
 	if len(label) == 0 {
 		label = END_OF_PROGRAM_LABEL
 	}

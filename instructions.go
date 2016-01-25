@@ -33,6 +33,13 @@ func cmd_swap(e *engine) error {
 }
 
 // ---------------------------------------------------
+func cmd_get(e *engine) error {
+	e.pat = e.hold
+	e.ip++
+	return nil
+}
+
+// ---------------------------------------------------
 func cmd_hold(e *engine) error {
 	e.hold = e.pat
 	e.ip++
@@ -40,19 +47,15 @@ func cmd_hold(e *engine) error {
 }
 
 // ---------------------------------------------------
+func cmd_getapp(e *engine) error {
+	e.pat = strings.Join([]string{e.pat, e.hold}, "\n")
+	e.ip++
+	return nil
+}
+
+// ---------------------------------------------------
 func cmd_holdapp(e *engine) error {
-	var lines = make([]string, 0, 2)
-
-	if e.hold != nil {
-		lines = append(lines, *e.hold)
-	}
-	if e.pat != nil {
-		lines = append(lines, *e.pat)
-	}
-
-	newhold := strings.Join(lines, "\n")
-	e.hold = &newhold
-
+	e.hold = strings.Join([]string{e.hold, e.pat}, "\n")
 	e.ip++
 	return nil
 }
@@ -71,13 +74,9 @@ func cmd_newBranch(target int) instruction {
 func cmd_print(e *engine) (err error) {
 	e.ip++
 
-	// FIXME check if real sed puts a newline when pattern space is empty
-	//   like   " g ; p "
-	if e.pat != nil {
-		_, err = e.output.WriteString(*e.pat)
-		if err == nil {
-			err = e.output.WriteByte('\n')
-		}
+	_, err = e.output.WriteString(e.pat)
+	if err == nil {
+		err = e.output.WriteByte('\n')
 	}
 	return err
 }
@@ -92,18 +91,30 @@ func cmd_lineno(e *engine) error {
 
 // ---------------------------------------------------
 func cmd_fillnext(e *engine) error {
+	var err error
+
+	// first, put out any stored-up 'a\'ppended text:
+	if e.appl != nil {
+		_, err = e.output.WriteString(*e.appl)
+		e.appl = nil
+		if err != nil {
+			return err
+		}
+	}
+
+	// just return if we're at EOF
 	if e.lastl {
 		return io.EOF
 	}
 
+	// otherwise, copy nxtl to the pattern space and
+	// refill.
 	e.ip++
 
-	patstring := e.nxtl // make a copy
-	e.pat = &patstring
+	e.pat = e.nxtl
 	e.lineno++
 
 	var prefix = true
-	var err error
 	var line []byte
 
 	var lines []string
@@ -204,4 +215,27 @@ func (c *cmd_change) run(e *engine) error {
 		_, err = e.output.WriteString(c.text)
 	}
 	return err
+}
+
+// --------------------------------------------------
+func cmd_newAppender(text string) instruction {
+	return func(e *engine) error {
+		e.ip++
+		if e.appl == nil {
+			e.appl = &text
+		} else {
+			var newstr = *e.appl + text
+			e.appl = &newstr
+		}
+		return nil
+	}
+}
+
+// --------------------------------------------------
+func cmd_newInserter(text string) instruction {
+	return func(e *engine) error {
+		e.ip++
+		_, err := e.output.WriteString(text)
+		return err
+	}
 }

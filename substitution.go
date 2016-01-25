@@ -7,52 +7,43 @@ package main
 import (
 	"fmt"
 	"regexp"
-	"sort"
+	"strconv"
 	"strings"
 )
 
 type substitute struct {
 	pattern     *regexp.Regexp // the pattern to match
 	replacement string         // the template for replacements
-	which       []int          // which patterns to replace
+	which       int            // which pattern to replace
 	pflag       bool           // do we print upon replacement?
+	gflag       bool           // do we replace every match after 'which'?
 }
 
 func (s *substitute) run(e *engine) (err error) {
 	e.ip++
-	if e.pat == nil {
+
+	// perform the search
+	matches := s.pattern.FindAllStringSubmatchIndex(e.pat, -1)
+
+	// filter to the matches we want to replace
+	var end int = len(matches)
+	if s.which < end {
+		if !s.gflag {
+			end = s.which + 1
+		}
+	} else {
+		// the matches we want weren't found
 		return
 	}
+	matches = matches[s.which:end]
 
-	matches := s.pattern.FindAllStringSubmatchIndex(*e.pat, -1)
-	if matches == nil {
-		return
-	}
+	// perform the replacement
+	e.pat = subst_replaceAll(e.pat, s, matches)
 
-	if len(s.which) > 0 {
-		// filter down the replacement list
-		filtered := make([][]int, 0, len(s.which))
-
-		for _, which := range s.which {
-			if which >= len(matches) {
-				break
-			}
-			filtered = append(filtered, matches[which])
-		}
-
-		if len(filtered) == 0 {
-			return
-		}
-		matches = filtered
-	}
-
-	if len(matches) > 0 {
-		var newpat = subst_replaceAll(*e.pat, s, matches)
-		e.pat = &newpat
-		if s.pflag {
-			err = cmd_print(e)
-			e.ip-- // roll back ip from the print command
-		}
+	// print if requested
+	if s.pflag {
+		err = cmd_print(e)
+		e.ip-- // roll back ip from the print command
 	}
 
 	return
@@ -78,16 +69,16 @@ func newSubstitution(pattern string, replacement string, mods string) (instructi
 	}
 
 	command := &substitute{pattern: rx, replacement: replacement}
-	var gflag = false
+	var numbers []rune
 
 	for _, char := range mods {
 		switch char {
 		case 'p':
 			command.pflag = true
 		case 'g':
-			gflag = true
-		case '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			command.which = append(command.which, int(char-'1'))
+			command.gflag = true
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			numbers = append(numbers, char)
 		default:
 			err = fmt.Errorf("Bad regexp modifier <%v>", char)
 		}
@@ -96,15 +87,14 @@ func newSubstitution(pattern string, replacement string, mods string) (instructi
 		}
 	}
 
-	// if it's not a global replacement, and they
-	// didn't specify numbers, we only replace the first
-	// match.
-	if !gflag && (len(command.which) == 0) {
-		command.which = append(command.which, 0)
+	if len(numbers) > 0 {
+		command.which, _ = strconv.Atoi(string(numbers))
+		if command.which > 0 {
+			command.which--
+		} else {
+			err = fmt.Errorf("Bad number %d on substitution", command.which)
+		}
 	}
-
-	// make sure any specified indices are sorted...
-	sort.Ints(command.which)
 
 	return command.run, err
 }
