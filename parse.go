@@ -200,9 +200,7 @@ func compile_twocond(ps *parseState, c1 condition) {
 		// it has to be able to talk to the condition
 		// to know when it's the last line of the change
 		tc := newTwoCond(c1, c2, len(ps.ins)+1, 0)
-		ps.ins = append(ps.ins, tc.run)
-		c_cmd := &cmd_change{tc, tok.args[0]}
-		ps.ins = append(ps.ins, c_cmd.run)
+		ps.ins = append(ps.ins, tc.run, cmd_newChanger(tok.args[0], tc))
 		tc.unmetloc = len(ps.ins)
 	default:
 		tc := newTwoCond(c1, c2, len(ps.ins)+1, 0)
@@ -243,8 +241,7 @@ func compile_cmd(ps *parseState, cmd *token) {
 		compile_branchTarget(ps, len(ps.ins), cmd)
 		ps.ins = append(ps.ins, zeroBranch) // placeholder
 	case 'c':
-		c_cmd := &cmd_change{nil, cmd.args[0]}
-		ps.ins = append(ps.ins, c_cmd.run)
+		ps.ins = append(ps.ins, cmd_newChanger(cmd.args[0], nil))
 	case 'd':
 		ps.ins = append(ps.ins, zeroBranch)
 	case 'g':

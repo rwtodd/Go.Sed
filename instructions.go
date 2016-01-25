@@ -202,19 +202,16 @@ func (c *cmd_twocond) run(e *engine) error {
 }
 
 // --------------------------------------------------
-type cmd_change struct {
-	guard *cmd_twocond
-	text  string
-}
+func cmd_newChanger(text string, guard *cmd_twocond) instruction {
+	return func(e *engine) error {
+		e.ip = 0 // go to the the next cycle
 
-func (c *cmd_change) run(e *engine) error {
-	e.ip = 0 // go to the the next cycle
-
-	var err error
-	if (c.guard == nil) || c.guard.isLastLine(e) {
-		_, err = e.output.WriteString(c.text)
+		var err error
+		if (guard == nil) || guard.isLastLine(e) {
+			_, err = e.output.WriteString(text)
+		}
+		return err
 	}
-	return err
 }
 
 // --------------------------------------------------
