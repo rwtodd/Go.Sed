@@ -274,6 +274,11 @@ func compile_cmd(ps *parseState, cmd *token) {
 		ps.ins = append(ps.ins, cmd_fillNext)
 	case 'p':
 		ps.ins = append(ps.ins, cmd_print)
+	case 'q':
+		if !noPrint {
+			ps.ins = append(ps.ins, cmd_print)
+		}
+		ps.ins = append(ps.ins, cmd_quit)
 	case 's':
 		subst, err := newSubstitution(cmd.args[0], cmd.args[1], cmd.args[2])
 		if err != nil {

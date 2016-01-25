@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+func cmd_quit(e *engine) error {
+	return io.EOF
+}
+
 // ---------------------------------------------------
 func cmd_swap(e *engine) error {
 	e.pat, e.hold = e.hold, e.pat
@@ -60,8 +64,8 @@ func cmd_newChangedBranch(target int) instruction {
 			e.ip = target
 			e.modified = false
 		} else {
-                        e.ip++
-                }
+			e.ip++
+		}
 		return nil
 	}
 }
