@@ -175,9 +175,11 @@ func cmd_fillNext(e *engine) error {
 }
 
 func cmd_fillNextAppend(e *engine) error {
-	var first = e.pat
+	var lines = make([]string, 2)
+	lines[0] = e.pat
 	err := cmd_fillNext(e) // increments e.ip, so we don't
-	e.pat = first + e.pat
+	lines[1] = e.pat
+	e.pat = strings.Join(lines, "\n")
 	return err
 }
 
