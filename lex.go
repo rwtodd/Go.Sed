@@ -76,6 +76,13 @@ func (lr *locReader) ReadRune() (rune, int, error) {
 }
 
 func (lr *locReader) UnreadRune() error {
+	lr.pos--
+	lr.eol = false
+
+	if lr.pos == 0 {
+		lr.line--
+		lr.eol = true
+	}
 	return lr.r.UnreadRune()
 }
 
