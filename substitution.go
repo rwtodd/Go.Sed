@@ -39,6 +39,7 @@ func (s *substitute) run(e *engine) (err error) {
 
 	// perform the replacement
 	e.pat = subst_replaceAll(e.pat, s, matches)
+	e.modified = true
 
 	// print if requested
 	if s.pflag {

@@ -6,25 +6,6 @@ import (
 	"strings"
 )
 
-// mapping: sed --> cmd
-
-//   n    -->   print ; fill_next     (or if -n is on:  fill_next)
-//   d    -->   branch(0)
-//   x    -->   swap
-//   p    -->   print
-//   b tgt -->  branch(tgt)   (just 'b' is a branch to 1.. since 0 is always fill_next)
-
-//   conditional:
-//   - numeric
-//   - regexp
-//   - EOF ('$')
-//   - range_conditional
-
-//  program 'pgm' is transformed into:
-//      fill_next ; { pgm } ; print ; branch(0)
-//  ... or if (-n) is on:
-//      fill_next ; { pgm } ; branch(0)
-
 // ---------------------------------------------------
 func cmd_swap(e *engine) error {
 	e.pat, e.hold = e.hold, e.pat
@@ -71,6 +52,21 @@ func cmd_newBranch(target int) instruction {
 }
 
 // ---------------------------------------------------
+// newChangedBranch generates branch instructions with specific
+// targets that only trigger on modified pattern spaces
+func cmd_newChangedBranch(target int) instruction {
+	return func(e *engine) error {
+		if e.modified {
+			e.ip = target
+			e.modified = false
+		} else {
+                        e.ip++
+                }
+		return nil
+	}
+}
+
+// ---------------------------------------------------
 func cmd_print(e *engine) (err error) {
 	e.ip++
 
@@ -82,6 +78,38 @@ func cmd_print(e *engine) (err error) {
 }
 
 // ---------------------------------------------------
+func cmd_printFirstLine(e *engine) (err error) {
+	e.ip++
+
+	idx := strings.IndexRune(e.pat, '\n')
+
+	if idx == -1 {
+		idx = len(e.pat)
+	}
+
+	_, err = e.output.WriteString(e.pat[:idx])
+	if err == nil {
+		err = e.output.WriteByte('\n')
+	}
+	return err
+}
+
+// ---------------------------------------------------
+func cmd_deleteFirstLine(e *engine) (err error) {
+	idx := strings.IndexRune(e.pat, '\n')
+
+	if idx == -1 {
+		e.pat = ""
+		e.ip = 0 // go back and fillNext
+	} else {
+		e.pat = e.pat[idx+1:]
+		e.ip = 1 // restart, but skip filling
+	}
+
+	return nil
+}
+
+// ---------------------------------------------------
 func cmd_lineno(e *engine) error {
 	e.ip++
 	var lineno = fmt.Sprintf("%d\n", e.lineno)
@@ -90,7 +118,7 @@ func cmd_lineno(e *engine) error {
 }
 
 // ---------------------------------------------------
-func cmd_fillnext(e *engine) error {
+func cmd_fillNext(e *engine) error {
 	var err error
 
 	// first, put out any stored-up 'a\'ppended text:
@@ -113,6 +141,7 @@ func cmd_fillnext(e *engine) error {
 
 	e.pat = e.nxtl
 	e.lineno++
+	e.modified = false
 
 	var prefix = true
 	var line []byte
@@ -138,6 +167,13 @@ func cmd_fillnext(e *engine) error {
 		err = nil
 	}
 
+	return err
+}
+
+func cmd_fillNextAppend(e *engine) error {
+	var first = e.pat
+	err := cmd_fillNext(e) // increments e.ip, so we don't
+	e.pat = first + e.pat
 	return err
 }
 

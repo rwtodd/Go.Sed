@@ -12,9 +12,10 @@ import (
 var zeroBranch = cmd_newBranch(0)
 
 type waitingBranch struct {
-	ip    int       // address of the branch to fix up
-	label string    // the target label
-	loc   *location // the original parse location
+	ip     int       // address of the branch to fix up
+	label  string    // the target label
+	letter rune      // 'b' or 't' branch
+	loc    *location // the original parse location
 }
 
 const (
@@ -25,15 +26,16 @@ type parseState struct {
 	toks       <-chan *token          // our input
 	ins        []instruction          // the compiled instructions
 	branches   []waitingBranch        // references to fix up
-	labels     map[string]instruction // named label branches
+	b_labels   map[string]instruction // named b branch labels
+	t_labels   map[string]instruction // named t branch labels
 	blockLevel int                    // how deeply nested are our blocks?
 	err        error                  // record any errors we encounter
 }
 
 func parse(input <-chan *token) ([]instruction, error) {
-	ps := &parseState{toks: input, labels: make(map[string]instruction)}
+	ps := &parseState{toks: input, b_labels: make(map[string]instruction), t_labels: make(map[string]instruction)}
 
-	ps.ins = append(ps.ins, cmd_fillnext)
+	ps.ins = append(ps.ins, cmd_fillNext)
 	parse_toplevel(ps)
 	if ps.err == nil && ps.blockLevel > 0 {
 		ps.err = fmt.Errorf("It looks like you are missing a closing brace!")
@@ -44,7 +46,8 @@ func parse(input <-chan *token) ([]instruction, error) {
 		return nil, ps.err
 	}
 
-	ps.labels[END_OF_PROGRAM_LABEL] = cmd_newBranch(len(ps.ins))
+	ps.b_labels[END_OF_PROGRAM_LABEL] = cmd_newBranch(len(ps.ins))
+	ps.t_labels[END_OF_PROGRAM_LABEL] = cmd_newChangedBranch(len(ps.ins))
 	if !noPrint {
 		ps.ins = append(ps.ins, cmd_print)
 	}
@@ -55,14 +58,22 @@ func parse(input <-chan *token) ([]instruction, error) {
 }
 
 func parse_resolveBranches(ps *parseState) {
-	b := ps.branches
-	for idx := range b {
-		ins, ok := ps.labels[b[idx].label]
+	waiting := ps.branches
+	for idx := range waiting {
+		var (
+			ins instruction
+			ok  bool
+		)
+		if waiting[idx].letter == 'b' {
+			ins, ok = ps.b_labels[waiting[idx].label]
+		} else {
+			ins, ok = ps.t_labels[waiting[idx].label]
+		}
 		if !ok {
-			ps.err = fmt.Errorf("unknown label %s %v", b[idx].label, b[idx].loc)
+			ps.err = fmt.Errorf("unknown label %s %v", waiting[idx].label, waiting[idx].loc)
 			break
 		}
-		ps.ins[b[idx].ip] = ins
+		ps.ins[waiting[idx].ip] = ins
 	}
 }
 
@@ -231,13 +242,19 @@ func compile_cmd(ps *parseState, cmd *token) {
 	switch cmd.letter {
 	case '=':
 		ps.ins = append(ps.ins, cmd_lineno)
+	case 'D':
+		ps.ins = append(ps.ins, cmd_deleteFirstLine)
 	case 'G':
 		ps.ins = append(ps.ins, cmd_getapp)
 	case 'H':
 		ps.ins = append(ps.ins, cmd_holdapp)
+	case 'N':
+		ps.ins = append(ps.ins, cmd_fillNextAppend)
+	case 'P':
+		ps.ins = append(ps.ins, cmd_printFirstLine)
 	case 'a':
 		ps.ins = append(ps.ins, cmd_newAppender(cmd.args[0]))
-	case 'b':
+	case 'b', 't':
 		compile_branchTarget(ps, len(ps.ins), cmd)
 		ps.ins = append(ps.ins, zeroBranch) // placeholder
 	case 'c':
@@ -254,7 +271,7 @@ func compile_cmd(ps *parseState, cmd *token) {
 		if !noPrint {
 			ps.ins = append(ps.ins, cmd_print)
 		}
-		ps.ins = append(ps.ins, cmd_fillnext)
+		ps.ins = append(ps.ins, cmd_fillNext)
 	case 'p':
 		ps.ins = append(ps.ins, cmd_print)
 	case 's':
@@ -264,8 +281,6 @@ func compile_cmd(ps *parseState, cmd *token) {
 			break
 		}
 		ps.ins = append(ps.ins, subst)
-	case 't':
-		panic("t not supported")
 	case 'x':
 		ps.ins = append(ps.ins, cmd_swap)
 	}
@@ -277,7 +292,7 @@ func compile_branchTarget(ps *parseState, ip int, cmd *token) {
 		label = END_OF_PROGRAM_LABEL
 	}
 
-	ps.branches = append(ps.branches, waitingBranch{ip, label, &cmd.location})
+	ps.branches = append(ps.branches, waitingBranch{ip, label, cmd.letter, &cmd.location})
 }
 
 func compile_label(ps *parseState, lbl *token) {
@@ -290,5 +305,6 @@ func compile_label(ps *parseState, lbl *token) {
 	// store a branch instruction to jump to the current location.
 	// They will be inserted into the instruction stream in
 	// the parse_resolveBranches function.
-	ps.labels[name] = cmd_newBranch(len(ps.ins))
+	ps.b_labels[name] = cmd_newBranch(len(ps.ins))
+	ps.t_labels[name] = cmd_newChangedBranch(len(ps.ins))
 }
