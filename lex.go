@@ -293,49 +293,52 @@ func lex(r *bufio.Reader, ch chan *token) {
 
 		topLoc = rdr.location // remember the start of the command
 
-		switch {
-		case cur == ';':
+		switch cur {
+		case ';':
 			ch <- &token{topLoc, TOK_EOL, cur, nil}
-		case cur == ',':
+		case ',':
 			ch <- &token{topLoc, TOK_COMMA, cur, nil}
-		case cur == '{':
+		case '{':
 			ch <- &token{topLoc, TOK_LBRACE, cur, nil}
-		case cur == '}':
+		case '}':
 			ch <- &token{topLoc, TOK_RBRACE, cur, nil}
-		case cur == '!':
+		case '!':
 			ch <- &token{topLoc, TOK_BANG, cur, nil}
-		case cur == '/':
+		case '/':
 			var rx string
 			rx, err = readDelimited(&rdr, '/')
 			ch <- &token{topLoc, TOK_RX, cur, []string{rx}}
-		case cur == '$':
+		case '$':
 			ch <- &token{topLoc, TOK_DOLLAR, cur, nil}
-		case cur == ':':
+		case ':':
 			var label string
 			label, err = readIdentifier(&rdr)
 			ch <- &token{topLoc, TOK_LABEL, cur, []string{label}}
-		case cur == 'b', cur == 't': // branches...
+		case 'b', 't': // branches...
 			var label string
 			label, err = readIdentifier(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, []string{label}}
-		case cur == 's': // substitution
+		case 's', 'y': // substitution, translation
 			var args []string
 			args, err = readSubstitution(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, args}
-		case cur == 'c': // change
+		case 'c': // change
 			var txt string
 			txt, err = readMultiLine(&rdr)
 			ch <- &token{topLoc, TOK_CHANGE, cur, []string{txt}}
-		case cur == 'i', cur == 'a': // insert or append
+		case 'i', 'a': // insert or append
 			var txt string
 			txt, err = readMultiLine(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, []string{txt}}
-		case unicode.IsDigit(cur):
-			var num string
-			num, err = readNumber(&rdr, cur)
-			ch <- &token{topLoc, TOK_NUM, cur, []string{num}}
 		default:
-			ch <- &token{topLoc, TOK_CMD, cur, nil}
+			if unicode.IsDigit(cur) {
+				var num string
+				num, err = readNumber(&rdr, cur)
+				ch <- &token{topLoc, TOK_NUM, cur, []string{num}}
+			} else {
+				// it's just a argument-free command
+				ch <- &token{topLoc, TOK_CMD, cur, nil}
+			}
 		}
 	}
 
