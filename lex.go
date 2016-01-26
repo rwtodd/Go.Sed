@@ -14,7 +14,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"unicode"
 )
@@ -247,7 +246,7 @@ func readIdentifier(r *locReader) (string, error) {
 }
 
 func readSubstitution(r *locReader) ([]string, error) {
-	var ans = make ([]string, 3)
+	var ans = make([]string, 3)
 	var err error
 
 	// step 1.: get the delimiter character for substitutions
@@ -275,8 +274,9 @@ func readSubstitution(r *locReader) ([]string, error) {
 	return ans, err
 }
 
-func lex(r *bufio.Reader, ch chan *token) {
+func lex(r *bufio.Reader, ch chan<- *token, errch chan<- error) {
 	defer close(ch)
+	defer close(errch)
 
 	rdr := locReader{}
 	rdr.r = r
@@ -345,6 +345,6 @@ func lex(r *bufio.Reader, ch chan *token) {
 	}
 
 	if err != io.EOF {
-		fmt.Fprintf(os.Stderr, "Error reading... <%s> %v", err.Error(), &topLoc)
+		errch <- fmt.Errorf("Error reading... <%s> %v", err.Error(), &topLoc)
 	}
 }

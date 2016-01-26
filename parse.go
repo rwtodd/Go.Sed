@@ -292,6 +292,8 @@ func compile_cmd(ps *parseState, cmd *token) {
 			break
 		}
 		ps.ins = append(ps.ins, trans)
+	default:
+		ps.err = fmt.Errorf("Unknown command '%c' %v", cmd.letter, &cmd.location)
 	}
 }
 

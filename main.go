@@ -49,9 +49,16 @@ func compileScript(args *[]string) ([]instruction, error) {
 
 	// STEP TWO:  Lex/Parse/Compile the script
 	ch := make(chan *token, 128)
-	go lex(program, ch)
+	errch := make(chan error, 1)
+	go lex(program, ch, errch)
 
-	return parse(ch)
+	instructions, parseErr := parse(ch)
+	var err = <-errch // look for lexing errors first...
+	if err == nil {
+		// if there were no lex errors, look for a parsing error
+		err = parseErr
+	}
+	return instructions, err
 }
 
 func main() {
