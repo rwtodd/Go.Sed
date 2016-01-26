@@ -176,8 +176,13 @@ func readDelimited(r *locReader, delimiter rune) (string, error) {
 	}
 
 	if character == '\n' {
-		err = fmt.Errorf("end-of-line while looking for %v", delimiter)
+		err = fmt.Errorf("end-of-line while looking for %c", delimiter)
 	}
+
+	if err == io.EOF {
+		err = fmt.Errorf("end-of-file while looking for %c", delimiter)
+	}
+
 	return buffer.String(), err
 }
 
@@ -242,7 +247,7 @@ func readIdentifier(r *locReader) (string, error) {
 }
 
 func readSubstitution(r *locReader) ([]string, error) {
-	var ans []string
+	var ans = make ([]string, 3)
 	var err error
 
 	// step 1.: get the delimiter character for substitutions
@@ -253,24 +258,21 @@ func readSubstitution(r *locReader) ([]string, error) {
 	}
 
 	// step 2.: read the regexp
-	var part1 string
-	part1, err = readDelimited(r, delimiter)
+	ans[0], err = readDelimited(r, delimiter)
 	if err != nil {
 		return ans, err
 	}
 
 	// step 3.: read the replacement
-	var part2 string
-	part2, err = readDelimited(r, delimiter)
+	ans[1], err = readDelimited(r, delimiter)
 	if err != nil {
 		return ans, err
 	}
 
 	// step 4.: read the modifiers
-	var mods string
-	mods, err = readIdentifier(r)
+	ans[2], err = readIdentifier(r)
 
-	return append(ans, part1, part2, mods), err
+	return ans, err
 }
 
 func lex(r *bufio.Reader, ch chan *token) {
@@ -343,6 +345,6 @@ func lex(r *bufio.Reader, ch chan *token) {
 	}
 
 	if err != io.EOF {
-		fmt.Fprintf(os.Stderr, "Error reading... <%s> near <%+v>", err.Error(), topLoc)
+		fmt.Fprintf(os.Stderr, "Error reading... <%s> %v", err.Error(), &topLoc)
 	}
 }
