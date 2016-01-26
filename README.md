@@ -15,7 +15,7 @@ in this space soon.  To be written.
 versions of the same. It takes '-help'.
   * __Lexer__: Complete.
   * __Parser/Engine__:  Has most commands now.  The only ones missing are
-'y', 'r' and 'w'.
+'r' and 'w'.
 
 
 ## Next Steps

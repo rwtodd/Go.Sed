@@ -279,12 +279,19 @@ func compile_cmd(ps *parseState, cmd *token) {
 	case 's':
 		subst, err := newSubstitution(cmd.args[0], cmd.args[1], cmd.args[2])
 		if err != nil {
-			ps.err = fmt.Errorf("Substitution error: %s %v", err.Error(), &cmd.location)
+			ps.err = fmt.Errorf("Substitution parse: %s %v", err.Error(), &cmd.location)
 			break
 		}
 		ps.ins = append(ps.ins, subst)
 	case 'x':
 		ps.ins = append(ps.ins, cmd_swap)
+	case 'y':
+		trans, err := newTranslation(cmd.args[0], cmd.args[1], cmd.args[2])
+		if err != nil {
+			ps.err = fmt.Errorf("Translation parse: %s %v", err.Error(), &cmd.location)
+			break
+		}
+		ps.ins = append(ps.ins, trans)
 	}
 }
 

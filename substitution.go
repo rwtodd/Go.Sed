@@ -1,16 +1,20 @@
 package main
 
-// This file has the functionality for substitution.
-// It's the most complicated function, so I didn't want
-// to mix it in with the other instructions in instructions.go.
+// This file has the functionality for substitution and translation.
+// They are the most complicated functions, so I didn't want
+// to mix them in with the other instructions in instructions.go.
 
 import (
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
+// ------------------------------------------------------------------
+// -  SUBSTITUTION  -------------------------------------------------
+// ------------------------------------------------------------------
 type substitute struct {
 	pattern     *regexp.Regexp // the pattern to match
 	replacement string         // the template for replacements
@@ -98,4 +102,41 @@ func newSubstitution(pattern string, replacement string, mods string) (instructi
 	}
 
 	return command.run, err
+}
+
+// ------------------------------------------------------------------
+// -  TRANSLATION  --------------------------------------------------
+// ------------------------------------------------------------------
+func newTranslation(pattern string, replacement string, mods string) (instruction, error) {
+	if len(mods) > 0 {
+		return nil, fmt.Errorf("Translation 'y' can't have modifiers")
+	}
+
+	rc1 := utf8.RuneCountInString(pattern)
+	rc2 := utf8.RuneCountInString(replacement)
+	if rc1 != rc2 {
+		return nil, fmt.Errorf("Translation 'y' pattern and replacement must be equal length")
+	}
+
+	// fill out repls array with alternating patterns and their replacements
+	var repls = make([]string, rc1+rc2)
+	idx := 0
+	for _, ch := range pattern {
+		repls[idx] = string(ch)
+		idx += 2
+	}
+	idx = 1
+	for _, ch := range replacement {
+		repls[idx] = string(ch)
+		idx += 2
+	}
+
+	stringReplacer := strings.NewReplacer(repls...)
+
+	// now return a custom-made instruction for this translation:
+	return func(e *engine) error {
+		e.pat = stringReplacer.Replace(e.pat)
+		e.ip++
+		return nil
+	}, nil
 }
