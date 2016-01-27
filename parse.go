@@ -293,7 +293,7 @@ func compile_cmd(ps *parseState, cmd *token) {
 	case 'x':
 		ps.ins = append(ps.ins, cmd_swap)
 	case 'y':
-		trans, err := newTranslation(cmd.args[0], cmd.args[1], cmd.args[2])
+		trans, err := newTranslation(cmd.args[0], cmd.args[1])
 		if err != nil {
 			ps.err = fmt.Errorf("Translation parse: %s %v", err.Error(), &cmd.location)
 			break

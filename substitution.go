@@ -107,11 +107,7 @@ func newSubstitution(pattern string, replacement string, mods string) (instructi
 // ------------------------------------------------------------------
 // -  TRANSLATION  --------------------------------------------------
 // ------------------------------------------------------------------
-func newTranslation(pattern string, replacement string, mods string) (instruction, error) {
-	if len(mods) > 0 {
-		return nil, fmt.Errorf("Translation 'y' can't have modifiers")
-	}
-
+func newTranslation(pattern string, replacement string) (instruction, error) {
 	rc1 := utf8.RuneCountInString(pattern)
 	rc2 := utf8.RuneCountInString(replacement)
 	if rc1 != rc2 {

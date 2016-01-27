@@ -326,6 +326,32 @@ func readSubstitution(r *locReader) ([]string, error) {
 	return ans, err
 }
 
+func readTranslation(r *locReader) ([]string, error) {
+	var ans = make([]string, 2)
+	var err error
+
+	// step 1.: get the delimiter character for substitutions
+	var delimiter rune
+	delimiter, _, err = r.ReadRune()
+	if err != nil {
+		return ans, err
+	}
+
+	// step 2.: read the regexp
+	ans[0], err = readDelimited(r, delimiter)
+	if err != nil {
+		return ans, err
+	}
+
+	// step 3.: read the replacement
+	ans[1], err = readDelimited(r, delimiter)
+	if err != nil {
+		return ans, err
+	}
+
+	return ans, err
+}
+
 func lex(r *bufio.Reader, ch chan<- *token, errch chan<- error) {
 	defer close(ch)
 	defer close(errch)
@@ -372,9 +398,13 @@ func lex(r *bufio.Reader, ch chan<- *token, errch chan<- error) {
 			var label string
 			label, err = readIdentifier(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, []string{label}}
-		case 's', 'y': // substitution, translation
+		case 's': // substitution
 			var args []string
 			args, err = readSubstitution(&rdr)
+			ch <- &token{topLoc, TOK_CMD, cur, args}
+		case 'y': // translation
+			var args []string
+			args, err = readTranslation(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, args}
 		case 'c': // change
 			var txt string
