@@ -414,7 +414,7 @@ func lex(r *bufio.Reader, ch chan<- *token, errch chan<- error) {
 			var txt string
 			txt, err = readMultiLine(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, []string{txt}}
-		case 'r':
+		case 'r', 'w':
 			var fname string
 			fname, err = readIdentifier(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, []string{fname}}

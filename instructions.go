@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -286,4 +287,25 @@ func cmd_newInserter(text string) instruction {
 func cmd_newReader(filename string) (instruction, error) {
 	bytes, err := ioutil.ReadFile(filename)
 	return cmd_newAppender(string(bytes)), err
+}
+
+// --------------------------------------------------
+// The 'w' command appends the current pattern space
+// to the named file.  In this implementation, it opens
+// the file for appending, writes the file, and then
+// closes the file.  This appears to be consistent with
+// what OS X sed does.
+func cmd_newWriter(filename string) instruction {
+	return func(e *engine) error {
+		e.ip++
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err == nil {
+			defer f.Close()
+			_, err = f.WriteString(e.pat)
+		}
+		if err == nil {
+			_, err = f.WriteString("\n")
+		}
+		return err
+	}
 }

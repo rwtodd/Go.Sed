@@ -290,6 +290,8 @@ func compile_cmd(ps *parseState, cmd *token) {
 			break
 		}
 		ps.ins = append(ps.ins, subst)
+	case 'w':
+		ps.ins = append(ps.ins, cmd_newWriter(cmd.args[0]))
 	case 'x':
 		ps.ins = append(ps.ins, cmd_swap)
 	case 'y':
