@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 )
 
@@ -277,4 +278,12 @@ func cmd_newInserter(text string) instruction {
 		_, err := e.output.WriteString(text)
 		return err
 	}
+}
+
+// --------------------------------------------------
+// The 'r' command is basically and 'a\' with the contents
+// of a file. I implement it literally that way below.
+func cmd_newReader(filename string) (instruction, error) {
+	bytes, err := ioutil.ReadFile(filename)
+	return cmd_newAppender(string(bytes)), err
 }

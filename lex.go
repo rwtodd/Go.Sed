@@ -332,6 +332,10 @@ func lex(r *bufio.Reader, ch chan<- *token, errch chan<- error) {
 			var txt string
 			txt, err = readMultiLine(&rdr)
 			ch <- &token{topLoc, TOK_CMD, cur, []string{txt}}
+		case 'r':
+			var fname string
+			fname, err = readIdentifier(&rdr)
+			ch <- &token{topLoc, TOK_CMD, cur, []string{fname}}
 		default:
 			if unicode.IsDigit(cur) {
 				var num string
