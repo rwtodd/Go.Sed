@@ -185,6 +185,58 @@ func readDelimited(r *locReader, delimiter rune) (string, error) {
 	return buffer.String(), err
 }
 
+// readReplacement reads until it finds the delimter character,
+// returning the string (not including the delimiter). It does
+// allow the delimiter to be escaped by a backslash ('\'), and it
+// does interpret a few common backslash escapes like \n and \t.
+// It is an error to reach an unescaped EOL while looking for the delimiter.
+func readReplacement(r *locReader, delimiter rune) (string, error) {
+	var buffer bytes.Buffer
+
+	var err error
+	var character rune
+	var previous rune
+
+	character, _, err = r.ReadRune()
+	for err == nil {
+		if character == '\r' {
+			character, _, err = r.ReadRune()
+			continue
+		}
+
+		if previous == '\\' {
+			// find out what we escaped...
+			switch character {
+			case 't':
+				buffer.WriteRune('\t')
+			case 'n':
+				buffer.WriteRune('\n')
+			default:
+				buffer.WriteRune(character)
+			}
+		} else {
+			if character == delimiter ||
+				character == '\n' {
+				break
+			} else if character != '\\' {
+				buffer.WriteRune(character)
+			}
+		}
+		previous = character
+		character, _, err = r.ReadRune()
+	}
+
+	if character == '\n' {
+		err = fmt.Errorf("end-of-line while looking for %c", delimiter)
+	}
+
+	if err == io.EOF {
+		err = fmt.Errorf("end-of-file while looking for %c", delimiter)
+	}
+
+	return buffer.String(), err
+}
+
 // readMultiLine reads until it finds an unescaped newline. It discards the
 // first line, if it is empty, because commands like "c\", "a\" and "i\" are
 // intended to be used that way.
@@ -263,7 +315,7 @@ func readSubstitution(r *locReader) ([]string, error) {
 	}
 
 	// step 3.: read the replacement
-	ans[1], err = readDelimited(r, delimiter)
+	ans[1], err = readReplacement(r, delimiter)
 	if err != nil {
 		return ans, err
 	}
