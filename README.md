@@ -29,7 +29,7 @@ replacement strings:
 
 You can also escape the newline like in a typical sed, if you want.
 
-__Loser Syntax__: Go-sed is a little more user-friendly when it comes to
+__Slightly Friendlier Syntax__: Go-sed is a little more user-friendly when it comes to
 syntax.  In a normal sed, you have to use one (and ONLY one)
 space between a `r` or `w` and the filename. Go-sed eats whitespace until it
 sees the filename.
