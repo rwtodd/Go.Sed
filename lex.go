@@ -1,4 +1,4 @@
-package main
+package sed
 
 // the lexer for SED.  The point of the lexer is to
 // reliably transform the input into a series of token structs.

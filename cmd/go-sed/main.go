@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+        "github.com/waywardcode/sed"
 )
 
 var noPrint bool
@@ -24,7 +26,7 @@ func init() {
 	flag.StringVar(&sedFile, "file", "", "a file to read as the program")
 }
 
-func compileScript(args *[]string) ([]instruction, error) {
+func compileScript(args *[]string) (*sed.Engine, error) {
 	var program *bufio.Reader
 
 	// STEP ONE: Find the script
@@ -47,18 +49,14 @@ func compileScript(args *[]string) ([]instruction, error) {
 		*args = (*args)[1:]
 	}
 
-	// STEP TWO:  Lex/Parse/Compile the script
-	ch := make(chan *token, 128)
-	errch := make(chan error, 1)
-	go lex(program, ch, errch)
-
-	instructions, parseErr := parse(ch)
-	var err = <-errch // look for lexing errors first...
-	if err == nil {
-		// if there were no lex errors, look for a parsing error
-		err = parseErr
-	}
-	return instructions, err
+	// STEP TWO: compile the program
+        var compiler func(*bufio.Reader) (*sed.Engine,error) 
+	if(noPrint) {
+		compiler = sed.NewQuiet
+        } else {
+		compiler = sed.New
+        }
+	return compiler(program)
 }
 
 func main() {
@@ -67,7 +65,7 @@ func main() {
 	var err error
 
 	// Find and compile the script
-	instructions, err := compileScript(&args)
+	engine, err := compileScript(&args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return
@@ -77,10 +75,7 @@ func main() {
 	output := bufio.NewWriter(os.Stdout)
 
 	if len(args) == 0 {
-		eng := engine{input: bufio.NewReader(os.Stdin),
-			output: output,
-			ins:    instructions}
-		err = run(&eng)
+		err = engine.Run(bufio.NewReader(os.Stdin), output)
 	} else {
 		for _, fname := range args {
 			fl, err := os.Open(fname)
@@ -88,10 +83,7 @@ func main() {
 				break
 			}
 
-			eng := engine{input: bufio.NewReader(fl),
-				output: output,
-				ins:    instructions}
-			err = run(&eng)
+			err = engine.Run(bufio.NewReader(fl), output)
 
 			fl.Close()
 			if err != nil {

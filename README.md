@@ -71,6 +71,10 @@ the design a little.
 
 You can get the code/executable by saying:
 
-    go get github.com/waywardcode/go-sed
+    go get github.com/waywardcode/sed/cmd/go-sed
+
+And, if you want to embed a sed engine in your own program, you can import:
+
+    import "github.com/waywardcode/sed"
 
 

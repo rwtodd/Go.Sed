@@ -1,4 +1,4 @@
-package main
+package sed 
 
 import (
 	"fmt"
@@ -11,20 +11,20 @@ import (
 // commands execute.
 
 type condition interface {
-	isMet(e *engine) bool
+	isMet(e *Engine) bool
 }
 
 // -----------------------------------------------------
 type numbercond int // for matching line number conditions
 
-func (n numbercond) isMet(e *engine) bool {
+func (n numbercond) isMet(e *Engine) bool {
 	return e.lineno == int(n)
 }
 
 // -----------------------------------------------------
 type eofcond struct{} // for matching the condition '$'
 
-func (_ eofcond) isMet(e *engine) bool {
+func (_ eofcond) isMet(e *Engine) bool {
 	return e.lastl
 }
 
@@ -33,7 +33,7 @@ type regexpcond struct {
 	re *regexp.Regexp // for matching regexp conditions
 }
 
-func (r *regexpcond) isMet(e *engine) (answer bool) {
+func (r *regexpcond) isMet(e *Engine) (answer bool) {
 	return r.re.MatchString(e.pat)
 }
 

@@ -1,4 +1,4 @@
-package main
+package sed
 
 import (
 	"fmt"
@@ -8,40 +8,40 @@ import (
 	"strings"
 )
 
-func cmd_quit(e *engine) error {
+func cmd_quit(e *Engine) error {
 	return io.EOF
 }
 
 // ---------------------------------------------------
-func cmd_swap(e *engine) error {
+func cmd_swap(e *Engine) error {
 	e.pat, e.hold = e.hold, e.pat
 	e.ip++
 	return nil
 }
 
 // ---------------------------------------------------
-func cmd_get(e *engine) error {
+func cmd_get(e *Engine) error {
 	e.pat = e.hold
 	e.ip++
 	return nil
 }
 
 // ---------------------------------------------------
-func cmd_hold(e *engine) error {
+func cmd_hold(e *Engine) error {
 	e.hold = e.pat
 	e.ip++
 	return nil
 }
 
 // ---------------------------------------------------
-func cmd_getapp(e *engine) error {
+func cmd_getapp(e *Engine) error {
 	e.pat = strings.Join([]string{e.pat, e.hold}, "\n")
 	e.ip++
 	return nil
 }
 
 // ---------------------------------------------------
-func cmd_holdapp(e *engine) error {
+func cmd_holdapp(e *Engine) error {
 	e.hold = strings.Join([]string{e.hold, e.pat}, "\n")
 	e.ip++
 	return nil
@@ -51,7 +51,7 @@ func cmd_holdapp(e *engine) error {
 // newBranch generates branch instructions with specific
 // targets
 func cmd_newBranch(target int) instruction {
-	return func(e *engine) error {
+	return func(e *Engine) error {
 		e.ip = target
 		return nil
 	}
@@ -61,7 +61,7 @@ func cmd_newBranch(target int) instruction {
 // newChangedBranch generates branch instructions with specific
 // targets that only trigger on modified pattern spaces
 func cmd_newChangedBranch(target int) instruction {
-	return func(e *engine) error {
+	return func(e *Engine) error {
 		if e.modified {
 			e.ip = target
 			e.modified = false
@@ -73,7 +73,7 @@ func cmd_newChangedBranch(target int) instruction {
 }
 
 // ---------------------------------------------------
-func cmd_print(e *engine) (err error) {
+func cmd_print(e *Engine) (err error) {
 	e.ip++
 
 	_, err = e.output.WriteString(e.pat)
@@ -84,7 +84,7 @@ func cmd_print(e *engine) (err error) {
 }
 
 // ---------------------------------------------------
-func cmd_printFirstLine(e *engine) (err error) {
+func cmd_printFirstLine(e *Engine) (err error) {
 	e.ip++
 
 	idx := strings.IndexRune(e.pat, '\n')
@@ -101,7 +101,7 @@ func cmd_printFirstLine(e *engine) (err error) {
 }
 
 // ---------------------------------------------------
-func cmd_deleteFirstLine(e *engine) (err error) {
+func cmd_deleteFirstLine(e *Engine) (err error) {
 	idx := strings.IndexRune(e.pat, '\n')
 
 	if idx == -1 {
@@ -116,7 +116,7 @@ func cmd_deleteFirstLine(e *engine) (err error) {
 }
 
 // ---------------------------------------------------
-func cmd_lineno(e *engine) error {
+func cmd_lineno(e *Engine) error {
 	e.ip++
 	var lineno = fmt.Sprintf("%d\n", e.lineno)
 	_, err := e.output.WriteString(lineno)
@@ -124,7 +124,7 @@ func cmd_lineno(e *engine) error {
 }
 
 // ---------------------------------------------------
-func cmd_fillNext(e *engine) error {
+func cmd_fillNext(e *Engine) error {
 	var err error
 
 	// first, put out any stored-up 'a\'ppended text:
@@ -176,7 +176,7 @@ func cmd_fillNext(e *engine) error {
 	return err
 }
 
-func cmd_fillNextAppend(e *engine) error {
+func cmd_fillNextAppend(e *Engine) error {
 	var lines = make([]string, 2)
 	lines[0] = e.pat
 	err := cmd_fillNext(e) // increments e.ip, so we don't
@@ -193,7 +193,7 @@ type cmd_simplecond struct {
 	unmetloc int       // where to jump if the condition is not met
 }
 
-func (c *cmd_simplecond) run(e *engine) error {
+func (c *cmd_simplecond) run(e *Engine) error {
 	if c.cond.isMet(e) {
 		e.ip = c.metloc
 	} else {
@@ -219,11 +219,11 @@ func newTwoCond(c1 condition, c2 condition, metloc int, unmetloc int) *cmd_twoco
 // isLastLine is here to support multi-line "c\" commands.
 // The command needs to know when it's the end of the
 // section so it can do the replacement.
-func (c *cmd_twocond) isLastLine(e *engine) bool {
+func (c *cmd_twocond) isLastLine(e *Engine) bool {
 	return c.isOn && (c.offFrom == e.lineno)
 }
 
-func (c *cmd_twocond) run(e *engine) error {
+func (c *cmd_twocond) run(e *Engine) error {
 	if c.isOn && (c.offFrom > 0) && (c.offFrom < e.lineno) {
 		c.isOn = false
 		c.offFrom = 0
@@ -247,7 +247,7 @@ func (c *cmd_twocond) run(e *engine) error {
 
 // --------------------------------------------------
 func cmd_newChanger(text string, guard *cmd_twocond) instruction {
-	return func(e *engine) error {
+	return func(e *Engine) error {
 		e.ip = 0 // go to the the next cycle
 
 		var err error
@@ -260,7 +260,7 @@ func cmd_newChanger(text string, guard *cmd_twocond) instruction {
 
 // --------------------------------------------------
 func cmd_newAppender(text string) instruction {
-	return func(e *engine) error {
+	return func(e *Engine) error {
 		e.ip++
 		if e.appl == nil {
 			e.appl = &text
@@ -274,7 +274,7 @@ func cmd_newAppender(text string) instruction {
 
 // --------------------------------------------------
 func cmd_newInserter(text string) instruction {
-	return func(e *engine) error {
+	return func(e *Engine) error {
 		e.ip++
 		_, err := e.output.WriteString(text)
 		return err
@@ -296,7 +296,7 @@ func cmd_newReader(filename string) (instruction, error) {
 // closes the file.  This appears to be consistent with
 // what OS X sed does.
 func cmd_newWriter(filename string) instruction {
-	return func(e *engine) error {
+	return func(e *Engine) error {
 		e.ip++
 		f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err == nil {

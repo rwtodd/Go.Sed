@@ -1,4 +1,4 @@
-package main
+package sed
 
 // This file has the functionality for substitution and translation.
 // They are the most complicated functions, so I didn't want
@@ -23,7 +23,7 @@ type substitute struct {
 	gflag       bool           // do we replace every match after 'which'?
 }
 
-func (s *substitute) run(e *engine) (err error) {
+func (s *substitute) run(e *Engine) (err error) {
 	e.ip++
 
 	// perform the search
@@ -130,7 +130,7 @@ func newTranslation(pattern string, replacement string) (instruction, error) {
 	stringReplacer := strings.NewReplacer(repls...)
 
 	// now return a custom-made instruction for this translation:
-	return func(e *engine) error {
+	return func(e *Engine) error {
 		e.pat = stringReplacer.Replace(e.pat)
 		e.ip++
 		return nil
