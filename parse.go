@@ -18,7 +18,7 @@ type waitingBranch struct {
 }
 
 const (
-	END_OF_PROGRAM_LABEL = "the end" // has a space... no conflicts with user labels
+	end_of_program_label = "the end" // has a space... no conflicts with user labels
 )
 
 type parseState struct {
@@ -46,8 +46,8 @@ func parse(input <-chan *token, quiet bool) ([]instruction, error) {
 		return nil, ps.err
 	}
 
-	ps.b_labels[END_OF_PROGRAM_LABEL] = cmd_newBranch(len(ps.ins))
-	ps.t_labels[END_OF_PROGRAM_LABEL] = cmd_newChangedBranch(len(ps.ins))
+	ps.b_labels[end_of_program_label] = cmd_newBranch(len(ps.ins))
+	ps.t_labels[end_of_program_label] = cmd_newChangedBranch(len(ps.ins))
 	if !ps.quiet {
 		ps.ins = append(ps.ins, cmd_print)
 	}
@@ -80,29 +80,29 @@ func parse_resolveBranches(ps *parseState) {
 func parse_toplevel(ps *parseState) {
 	for tok := range ps.toks {
 		switch tok.typ {
-		case TOK_CMD:
+		case tok_CMD:
 			compile_cmd(ps, tok)
-		case TOK_LABEL:
+		case tok_LABEL:
 			compile_label(ps, tok)
-		case TOK_NUM:
+		case tok_NUM:
 			n, err := strconv.Atoi(tok.args[0])
 			if err != nil {
 				ps.err = fmt.Errorf("Bad number <%s> %v", tok.args[0], &tok.location)
 				break
 			}
 			compile_cond(ps, numbercond(n))
-		case TOK_DOLLAR:
+		case tok_DOLLAR:
 			compile_cond(ps, eofcond{})
-		case TOK_RX:
+		case tok_RX:
 			var rx condition
 			rx, ps.err = newRECondition(tok.args[0], &tok.location)
 			if ps.err != nil {
 				break
 			}
 			compile_cond(ps, rx)
-		case TOK_EOL:
+		case tok_EOL:
 			// top level empty lines are OK
-		case TOK_RBRACE:
+		case tok_RBRACE:
 			if ps.blockLevel == 0 {
 				ps.err = fmt.Errorf("Unexpected brace %v", &tok.location)
 			}
@@ -134,9 +134,9 @@ func compile_cond(ps *parseState, c condition) {
 	}
 
 	switch tok.typ {
-	case TOK_COMMA:
+	case tok_COMMA:
 		compile_twocond(ps, c)
-	case TOK_BANG:
+	case tok_BANG:
 		tok, ok = mustGetToken(ps)
 		if !ok {
 			return
@@ -165,16 +165,16 @@ func compile_twocond(ps *parseState, c1 condition) {
 	var c2 condition
 
 	switch tok.typ {
-	case TOK_NUM:
+	case tok_NUM:
 		n, err := strconv.Atoi(tok.args[0])
 		if err != nil {
 			ps.err = fmt.Errorf("Bad number <%s> %v", tok.args[0], &tok.location)
 			break
 		}
 		c2 = numbercond(n)
-	case TOK_DOLLAR:
+	case tok_DOLLAR:
 		c2 = eofcond{}
-	case TOK_RX:
+	case tok_RX:
 		c2, ps.err = newRECondition(tok.args[0], &tok.location)
 		if ps.err != nil {
 			break
@@ -195,7 +195,7 @@ func compile_twocond(ps *parseState, c1 condition) {
 	}
 
 	switch tok.typ {
-	case TOK_BANG:
+	case tok_BANG:
 		tok, ok = mustGetToken(ps)
 		if !ok {
 			return
@@ -204,7 +204,7 @@ func compile_twocond(ps *parseState, c1 condition) {
 		ps.ins = append(ps.ins, tc.run)
 		compile_block(ps, tok)
 		tc.metloc = len(ps.ins)
-	case TOK_CHANGE:
+	case tok_CHANGE:
 		// special case for 2-condition change command...
 		// it has to be able to talk to the condition
 		// to know when it's the last line of the change
@@ -224,10 +224,10 @@ func compile_twocond(ps *parseState, c1 condition) {
 // Anything other than LBRACE or CMD is not allowed here.
 func compile_block(ps *parseState, cmd *token) {
 	switch cmd.typ {
-	case TOK_LBRACE:
+	case tok_LBRACE:
 		ps.blockLevel++
 		parse_toplevel(ps)
-	case TOK_CMD, TOK_CHANGE:
+	case tok_CMD, tok_CHANGE:
 		compile_cmd(ps, cmd)
 	default:
 		ps.err = fmt.Errorf("Unexpected token '%c' at start of block  %v", cmd.letter, &cmd.location)
@@ -310,7 +310,7 @@ func compile_cmd(ps *parseState, cmd *token) {
 func compile_branchTarget(ps *parseState, ip int, cmd *token) {
 	label := cmd.args[0]
 	if len(label) == 0 {
-		label = END_OF_PROGRAM_LABEL
+		label = end_of_program_label
 	}
 
 	ps.branches = append(ps.branches, waitingBranch{ip, label, cmd.letter, &cmd.location})

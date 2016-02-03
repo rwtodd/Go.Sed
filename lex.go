@@ -28,17 +28,17 @@ func (l *location) String() string {
 }
 
 const (
-	TOK_NUM = iota
-	TOK_RX
-	TOK_COMMA
-	TOK_BANG
-	TOK_DOLLAR
-	TOK_LBRACE
-	TOK_RBRACE
-	TOK_EOL
-	TOK_CMD
-	TOK_CHANGE
-	TOK_LABEL
+	tok_NUM = iota
+	tok_RX
+	tok_COMMA
+	tok_BANG
+	tok_DOLLAR
+	tok_LBRACE
+	tok_RBRACE
+	tok_EOL
+	tok_CMD
+	tok_CHANGE
+	tok_LABEL
 )
 
 type token struct {
@@ -375,57 +375,57 @@ func lex(r *bufio.Reader, ch chan<- *token, errch chan<- error) {
 
 		switch cur {
 		case ';':
-			ch <- &token{topLoc, TOK_EOL, cur, nil}
+			ch <- &token{topLoc, tok_EOL, cur, nil}
 		case ',':
-			ch <- &token{topLoc, TOK_COMMA, cur, nil}
+			ch <- &token{topLoc, tok_COMMA, cur, nil}
 		case '{':
-			ch <- &token{topLoc, TOK_LBRACE, cur, nil}
+			ch <- &token{topLoc, tok_LBRACE, cur, nil}
 		case '}':
-			ch <- &token{topLoc, TOK_RBRACE, cur, nil}
+			ch <- &token{topLoc, tok_RBRACE, cur, nil}
 		case '!':
-			ch <- &token{topLoc, TOK_BANG, cur, nil}
+			ch <- &token{topLoc, tok_BANG, cur, nil}
 		case '/':
 			var rx string
 			rx, err = readDelimited(&rdr, '/')
-			ch <- &token{topLoc, TOK_RX, cur, []string{rx}}
+			ch <- &token{topLoc, tok_RX, cur, []string{rx}}
 		case '$':
-			ch <- &token{topLoc, TOK_DOLLAR, cur, nil}
+			ch <- &token{topLoc, tok_DOLLAR, cur, nil}
 		case ':':
 			var label string
 			label, err = readIdentifier(&rdr)
-			ch <- &token{topLoc, TOK_LABEL, cur, []string{label}}
+			ch <- &token{topLoc, tok_LABEL, cur, []string{label}}
 		case 'b', 't': // branches...
 			var label string
 			label, err = readIdentifier(&rdr)
-			ch <- &token{topLoc, TOK_CMD, cur, []string{label}}
+			ch <- &token{topLoc, tok_CMD, cur, []string{label}}
 		case 's': // substitution
 			var args []string
 			args, err = readSubstitution(&rdr)
-			ch <- &token{topLoc, TOK_CMD, cur, args}
+			ch <- &token{topLoc, tok_CMD, cur, args}
 		case 'y': // translation
 			var args []string
 			args, err = readTranslation(&rdr)
-			ch <- &token{topLoc, TOK_CMD, cur, args}
+			ch <- &token{topLoc, tok_CMD, cur, args}
 		case 'c': // change
 			var txt string
 			txt, err = readMultiLine(&rdr)
-			ch <- &token{topLoc, TOK_CHANGE, cur, []string{txt}}
+			ch <- &token{topLoc, tok_CHANGE, cur, []string{txt}}
 		case 'i', 'a': // insert or append
 			var txt string
 			txt, err = readMultiLine(&rdr)
-			ch <- &token{topLoc, TOK_CMD, cur, []string{txt}}
+			ch <- &token{topLoc, tok_CMD, cur, []string{txt}}
 		case 'r', 'w':
 			var fname string
 			fname, err = readIdentifier(&rdr)
-			ch <- &token{topLoc, TOK_CMD, cur, []string{fname}}
+			ch <- &token{topLoc, tok_CMD, cur, []string{fname}}
 		default:
 			if unicode.IsDigit(cur) {
 				var num string
 				num, err = readNumber(&rdr, cur)
-				ch <- &token{topLoc, TOK_NUM, cur, []string{num}}
+				ch <- &token{topLoc, tok_NUM, cur, []string{num}}
 			} else {
 				// it's just a argument-free command
-				ch <- &token{topLoc, TOK_CMD, cur, nil}
+				ch <- &token{topLoc, tok_CMD, cur, nil}
 			}
 		}
 	}

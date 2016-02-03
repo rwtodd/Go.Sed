@@ -1,3 +1,15 @@
+// Package sed implements the classic UNIX sed language in pure Go.
+// The interface is very simple: a user compiles a program into an
+// execution engine by calling New or NewQuiet. Then, the engine
+// is run from an input to an output via Run().
+//
+// All classic sed commands are supported, but since the package
+// uses Go's regexp package for the regular expressions, the syntax
+// for regexps will not be the same as a typical UNIX sed.  In other
+// words, instead of:  s|ab\(c*\)d|\1|g  you would say: s|ab(c*)d|$1|g.
+// So this is a Go-flavored sed, rather than a drop-in replacement for
+// a UNIX sed.  Depending on your tastes, you will either consider this
+// an improvement or completely brain-dead.
 package sed
 
 import (
@@ -73,15 +85,6 @@ func (e *Engine) Run(input *bufio.Reader, output *bufio.Writer) error {
 
 	// prime the engine by resetting the internal flags and filling nxtl...
 	*e = Engine{ins: e.ins, input: input, output: output}
-	//        e.nxtl = ""
-	//        e.pat = e.nxtl
-	//        e.hold = e.nxtl
-	//        e.appl = nil
-	//        e.lastl = false
-	//	e.input = input
-	//	e.output = output
-	//	e.lineno = 0
-	//	e.modified = false
 	err = cmd_fillNext(e)
 
 	// roll back the IP and lineno
