@@ -6,42 +6,55 @@ import (
 	"testing"
 )
 
+// a driver for running a program against input, and checking the output
+func runprog(t *testing.T, prog, input, expected string) {
+	engine, err := New(bufio.NewReader(bytes.NewBufferString(prog)))
+	if err != nil {
+		t.Fatalf("Couldn't parse program <%s>, %s", prog, err.Error())
+	}
+
+	result, err := engine.RunString(input)
+	if err != nil {
+		t.Fatalf("Couldn't run program, %s", err.Error())
+	}
+
+	if result != expected {
+		t.Fatalf("Program got result <%s> instead of <%s>", result, expected)
+	}
+
+}
+
 func TestCommify(t *testing.T) {
-	prog := `
+        prog := `
 # a program to commify numbers
 :loop 
 s/(.*\d)(\d\d\d)/$1,$2/
 t loop
 `
-	engine, err := New(bufio.NewReader(bytes.NewBufferString(prog)))
-	if err != nil {
-		t.Fatalf("Couldn't parse commify, %s", err.Error())
-	}
-
-	result, err := engine.RunString("12345\n")
-	if err != nil {
-		t.Fatalf("Couldn't run commify, %s", err.Error())
-	}
-
-	if result != "12,345\n" {
-		t.Fatalf("Commify got result <%s> instead of 12,345", result)
-	}
+	runprog(t, prog,
+		"12345\n",
+		"12,345\n")
+	runprog(t, prog,
+		"12345678910\nthe best 1234.56\n",
+		"12,345,678,910\nthe best 1,234.56\n")
 }
 
 func TestDelete(t *testing.T) {
-	prog := "d"
-	engine, err := New(bufio.NewReader(bytes.NewBufferString(prog)))
-	if err != nil {
-		t.Fatalf("Couldn't parse delete prog, %s", err.Error())
-	}
+	runprog(t, "d", "12345\n12345", "")
+}
 
-	result, err := engine.RunString("12345\n12345")
-	if err != nil {
-		t.Fatalf("Couldn't run delete prog, %s", err.Error())
-	}
+func TestSubst(t *testing.T) {
+	runprog(t, `
+# test a few features of s/pattern/replacement/flags
+s:(\d)(\d)(\d):$1\t$2\t$3:  # put tabs between 3 digits
+s/[a-z]/X/3g                # replace lowercase letters with an X, starting with the 3rd one
+`,
+		"a 234 is the Way\n12345 ONE two three\n",
+		"a 2\t3\t4 iX XXX WXX\n1\t2\t345 ONE twX XXXXX\n")
+}
 
-	if result != "" {
-		t.Fatalf("Delete prog got result <%s> instead of an empty string", result)
-	}
-
+func TestG(t *testing.T) {
+	runprog(t, "$ !G", 
+		"one\ntwo\nthree\n", 
+		"one\n\ntwo\n\nthree\n")
 }
