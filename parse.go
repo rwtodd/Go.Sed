@@ -28,11 +28,12 @@ type parseState struct {
 	b_labels   map[string]instruction // named b branch labels
 	t_labels   map[string]instruction // named t branch labels
 	blockLevel int                    // how deeply nested are our blocks?
+	quiet      bool                   // are we building a quiet engine (-n sed)?
 	err        error                  // record any errors we encounter
 }
 
-func parse(input <-chan *token) ([]instruction, error) {
-	ps := &parseState{toks: input, b_labels: make(map[string]instruction), t_labels: make(map[string]instruction)}
+func parse(input <-chan *token, quiet bool) ([]instruction, error) {
+	ps := &parseState{toks: input, b_labels: make(map[string]instruction), t_labels: make(map[string]instruction), quiet: quiet}
 
 	ps.ins = append(ps.ins, cmd_fillNext)
 	parse_toplevel(ps)
@@ -47,7 +48,7 @@ func parse(input <-chan *token) ([]instruction, error) {
 
 	ps.b_labels[END_OF_PROGRAM_LABEL] = cmd_newBranch(len(ps.ins))
 	ps.t_labels[END_OF_PROGRAM_LABEL] = cmd_newChangedBranch(len(ps.ins))
-	if !noPrint {
+	if !ps.quiet {
 		ps.ins = append(ps.ins, cmd_print)
 	}
 	ps.ins = append(ps.ins, zeroBranch)
@@ -265,14 +266,14 @@ func compile_cmd(ps *parseState, cmd *token) {
 	case 'i':
 		ps.ins = append(ps.ins, cmd_newInserter(cmd.args[0]))
 	case 'n':
-		if !noPrint {
+		if !ps.quiet {
 			ps.ins = append(ps.ins, cmd_print)
 		}
 		ps.ins = append(ps.ins, cmd_fillNext)
 	case 'p':
 		ps.ins = append(ps.ins, cmd_print)
 	case 'q':
-		if !noPrint {
+		if !ps.quiet {
 			ps.ins = append(ps.ins, cmd_print)
 		}
 		ps.ins = append(ps.ins, cmd_quit)

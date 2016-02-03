@@ -1,4 +1,4 @@
-package sed 
+package sed
 
 import (
 	"fmt"

@@ -38,10 +38,10 @@ func makeEngine(program *bufio.Reader, isQuiet bool) (*Engine, error) {
 		err = parseErr
 	}
 
-        if err != nil {
- 		// we had an error, so return a nil engine
-            return nil, err
-        }
+	if err != nil {
+		// we had an error, so return a nil engine
+		return nil, err
+	}
 
 	return &Engine{ins: instructions}, nil
 }
@@ -51,18 +51,18 @@ func makeEngine(program *bufio.Reader, isQuiet bool) (*Engine, error) {
 // engine will be 'nil' and the error will be returned.  Otherwise, the returned
 // error will be nil.
 func New(program *bufio.Reader) (*Engine, error) {
-  	return makeEngine(program, false)
+	return makeEngine(program, false)
 }
 
 // NewQuiet creates a new sed engine from a program.  It behaves exactly as
 // New(), except it produces an engine that doesn't print lines by defualt. This
-// is the classic '-n' sed behaviour.  
+// is the classic '-n' sed behaviour.
 func NewQuiet(program *bufio.Reader) (*Engine, error) {
-  	return makeEngine(program, true)
+	return makeEngine(program, true)
 }
 
 // Run executes the program embodied by the Engine on the given
-// input, with output going to the given output. Both must be 
+// input, with output going to the given output. Both must be
 // buffered, which should not be a big inconvenience since bufio
 // can wrap any io.Reader or io.Writer.  Still, perhaps in a later
 // release, more convenience functions can be added.
@@ -71,24 +71,24 @@ func NewQuiet(program *bufio.Reader) (*Engine, error) {
 func (e *Engine) Run(input *bufio.Reader, output *bufio.Writer) error {
 	var err error
 
-	// prime the engine by resetting the internal flags and filling nxtl... 
-	*e = &Engine{ins: e.ins, input: input, output: output}
-//        e.nxtl = ""	
-//        e.pat = e.nxtl	
-//        e.hold = e.nxtl
-//        e.appl = nil
-//        e.lastl = false
-//	e.input = input
-//	e.output = output 
-//	e.lineno = 0
-//	e.modified = false
+	// prime the engine by resetting the internal flags and filling nxtl...
+	*e = Engine{ins: e.ins, input: input, output: output}
+	//        e.nxtl = ""
+	//        e.pat = e.nxtl
+	//        e.hold = e.nxtl
+	//        e.appl = nil
+	//        e.lastl = false
+	//	e.input = input
+	//	e.output = output
+	//	e.lineno = 0
+	//	e.modified = false
 	err = cmd_fillNext(e)
 
-        // roll back the IP and lineno
+	// roll back the IP and lineno
 	e.ip = 0
 	e.lineno = 0
 
-        // run the program
+	// run the program
 	for err == nil {
 		err = e.ins[e.ip](e)
 	}
