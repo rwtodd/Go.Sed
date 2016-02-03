@@ -14,6 +14,7 @@ package sed
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 )
 
@@ -106,4 +107,16 @@ func (e *Engine) Run(input *bufio.Reader, output *bufio.Writer) error {
 	}
 
 	return err
+}
+
+// RunString executes the program embodied by the Engine on the
+// given string as input, returning the output string and any
+// errors that occured.
+func (e *Engine) RunString(input string) (string, error) {
+	inbuf := bufio.NewReader(bytes.NewBufferString(input))
+	var outbytes bytes.Buffer
+	outbuf := bufio.NewWriter(&outbytes)
+	err := e.Run(inbuf, outbuf)
+
+	return outbytes.String(), err
 }
