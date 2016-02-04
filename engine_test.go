@@ -58,3 +58,26 @@ func TestG(t *testing.T) {
 		"one\ntwo\nthree\n", 
 		"one\n\ntwo\n\nthree\n")
 }
+
+func TestRemoveTags(t *testing.T) {
+	runprog(t, `
+# remove all the tags from an xml/html document
+/</{
+  :loop
+  s/<[^<]*>//g
+  /</ {
+    N
+    b loop
+  }
+  /^\s*$/d  # skip the line if it was all tags
+}`,
+	`<html><body>
+<table
+border=2><tr><td valign=top
+align=right>1.</td>
+<td>Line 1 Column 2</
+td>
+</table>
+</body></html>`,
+	"1.\nLine 1 Column 2\n")
+}
