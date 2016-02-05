@@ -39,10 +39,11 @@ type instruction func(*Engine) error
 
 // makeEngine is the logic behine the New and NewQuiet public functions.
 // It lexes and parses the program, and makes a new Engine out of it.
-func makeEngine(program *bufio.Reader, isQuiet bool) (*Engine, error) {
+func makeEngine(program io.Reader, isQuiet bool) (*Engine, error) {
+	bufprog := bufio.NewReader(program)
 	ch := make(chan *token, 128)
 	errch := make(chan error, 1)
-	go lex(program, ch, errch)
+	go lex(bufprog, ch, errch)
 
 	instructions, parseErr := parse(ch, isQuiet)
 	var err = <-errch // look for lexing errors first...
@@ -63,29 +64,28 @@ func makeEngine(program *bufio.Reader, isQuiet bool) (*Engine, error) {
 // via the Run method. If the provided program has any errors, the returned
 // engine will be 'nil' and the error will be returned.  Otherwise, the returned
 // error will be nil.
-func New(program *bufio.Reader) (*Engine, error) {
+func New(program io.Reader) (*Engine, error) {
 	return makeEngine(program, false)
 }
 
 // NewQuiet creates a new sed engine from a program.  It behaves exactly as
 // New(), except it produces an engine that doesn't print lines by defualt. This
 // is the classic '-n' sed behaviour.
-func NewQuiet(program *bufio.Reader) (*Engine, error) {
+func NewQuiet(program io.Reader) (*Engine, error) {
 	return makeEngine(program, true)
 }
 
 // Run executes the program embodied by the Engine on the given
-// input, with output going to the given output. Both must be
-// buffered, which should not be a big inconvenience since bufio
-// can wrap any io.Reader or io.Writer.  Still, perhaps in a later
-// release, more convenience functions can be added.
+// input, with output going to the given output. To run against
+// a string, use RunString instead.
 //
 // Any errors encountered during the run will be returned to the caller.
-func (e *Engine) Run(input *bufio.Reader, output *bufio.Writer) error {
+func (e *Engine) Run(input io.Reader, output io.Writer) error {
 	var err error
+	bufin, bufout := bufio.NewReader(input), bufio.NewWriter(output)
 
 	// prime the engine by resetting the internal flags and filling nxtl...
-	*e = Engine{ins: e.ins, input: input, output: output}
+	*e = Engine{ins: e.ins, input: bufin, output: bufout}
 	err = cmd_fillNext(e)
 
 	// roll back the IP and lineno
@@ -113,10 +113,9 @@ func (e *Engine) Run(input *bufio.Reader, output *bufio.Writer) error {
 // given string as input, returning the output string and any
 // errors that occured.
 func (e *Engine) RunString(input string) (string, error) {
-	inbuf := bufio.NewReader(bytes.NewBufferString(input))
+	inbuf := bytes.NewBufferString(input)
 	var outbytes bytes.Buffer
-	outbuf := bufio.NewWriter(&outbytes)
-	err := e.Run(inbuf, outbuf)
+	err := e.Run(inbuf, &outbytes)
 
 	return outbytes.String(), err
 }

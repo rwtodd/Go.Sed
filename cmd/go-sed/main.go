@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
-        "github.com/waywardcode/sed"
+	"github.com/waywardcode/sed"
 )
 
 var noPrint bool
@@ -27,12 +27,12 @@ func init() {
 }
 
 func compileScript(args *[]string) (*sed.Engine, error) {
-	var program *bufio.Reader
+	var program io.Reader
 
 	// STEP ONE: Find the script
 	switch {
 	case evalProg != "":
-		program = bufio.NewReader(strings.NewReader(evalProg))
+		program = strings.NewReader(evalProg)
 		if sedFile != "" {
 			return nil, fmt.Errorf("Cannot specify both an expression and a program file!")
 		}
@@ -42,20 +42,20 @@ func compileScript(args *[]string) (*sed.Engine, error) {
 			return nil, fmt.Errorf("Error opening %s: %v", sedFile, err)
 		}
 		defer fl.Close()
-		program = bufio.NewReader(fl)
+		program = fl
 	case len(*args) > 0:
 		// no -e or -f given, so the first argument is taken as the script to run
-		program = bufio.NewReader(strings.NewReader((*args)[0]))
+		program = strings.NewReader((*args)[0])
 		*args = (*args)[1:]
 	}
 
 	// STEP TWO: compile the program
-        var compiler func(*bufio.Reader) (*sed.Engine,error) 
-	if(noPrint) {
+	var compiler func(io.Reader) (*sed.Engine, error)
+	if noPrint {
 		compiler = sed.NewQuiet
-        } else {
+	} else {
 		compiler = sed.New
-        }
+	}
 	return compiler(program)
 }
 
@@ -71,11 +71,8 @@ func main() {
 		return
 	}
 
-	// Now, run the script against the input
-	output := bufio.NewWriter(os.Stdout)
-
 	if len(args) == 0 {
-		err = engine.Run(bufio.NewReader(os.Stdin), output)
+		err = engine.Run(os.Stdin, os.Stdout)
 	} else {
 		for _, fname := range args {
 			fl, err := os.Open(fname)
@@ -83,7 +80,7 @@ func main() {
 				break
 			}
 
-			err = engine.Run(bufio.NewReader(fl), output)
+			err = engine.Run(fl, os.Stdout)
 
 			fl.Close()
 			if err != nil {

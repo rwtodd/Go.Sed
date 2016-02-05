@@ -1,14 +1,13 @@
 package sed
 
 import (
-	"bufio"
 	"bytes"
 	"testing"
 )
 
 // a driver for running a program against input, and checking the output
 func runprog(t *testing.T, prog, input, expected string) {
-	engine, err := New(bufio.NewReader(bytes.NewBufferString(prog)))
+	engine, err := New(bytes.NewBufferString(prog))
 	if err != nil {
 		t.Fatalf("Couldn't parse program <%s>, %s", prog, err.Error())
 	}
@@ -25,7 +24,7 @@ func runprog(t *testing.T, prog, input, expected string) {
 }
 
 func TestCommify(t *testing.T) {
-        prog := `
+	prog := `
 # a program to commify numbers
 :loop 
 s/(.*\d)(\d\d\d)/$1,$2/
@@ -54,8 +53,8 @@ s/[a-z]/X/3g                # replace lowercase letters with an X, starting with
 }
 
 func TestG(t *testing.T) {
-	runprog(t, "$ !G", 
-		"one\ntwo\nthree\n", 
+	runprog(t, "$ !G",
+		"one\ntwo\nthree\n",
 		"one\n\ntwo\n\nthree\n")
 }
 
@@ -71,7 +70,7 @@ func TestRemoveTags(t *testing.T) {
   }
   /^\s*$/d  # skip the line if it was all tags
 }`,
-	`<html><body>
+		`<html><body>
 <table
 border=2><tr><td valign=top
 align=right>1.</td>
@@ -79,5 +78,5 @@ align=right>1.</td>
 td>
 </table>
 </body></html>`,
-	"1.\nLine 1 Column 2\n")
+		"1.\nLine 1 Column 2\n")
 }
