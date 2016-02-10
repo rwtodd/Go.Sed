@@ -19,7 +19,7 @@ in practice are:
 
 | Go-sed          |  Traditional RE   | Notes                             |
 | --------------- | ----------------- | --------------------------------- |
-|  s/a(bc*)d/$1/g |  s/a\(bc*\)d/\1/g | Don't escape (); Use $1, $2, etc. |
+|  s/a(bc*)d/$1/g |  s/a\\(bc*\\)d/\1/g | Don't escape (); Use $1, $2, etc. |
 |  s/(?s).//      |  s/.//            | If you want dot to match \n, use (?s) flag.  |
 
 Go's regexps have many rich options, which you can see [here](https://github.com/google/re2/wiki/Syntax).
