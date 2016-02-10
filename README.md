@@ -102,7 +102,15 @@ The library is spread out among several files:
       }
   
   A couple commands have so much state that a simple closure would be unwieldy, so those get a struct
-  and an associated `run` method. That `run` method pointer become the instruction.
+  and an associated `run` method. That `run` method pointer becomes the instruction.
+
+  You can see in the example above that each instruction is responsible for incrementing the IP (_instruction pointer_)
+  in the Engine. That's flexible because many of the instructions branch, and they can set the IP to whatever
+  they need. However, this was the __number one__ cause of bugs during development: I'd add a new command, and forget
+  to increment the IP, leading to an infinite loop on that instruction.  So, I possibly should have had the 
+  engine auto-increment the IP, and have the branching instructions account for that when setting IP.  It was a
+  trade-off between keeping the inner loop as tight as possible and keeping the instructions as simple as 
+  possible.  I might have made the wrong choice there. 
 
   * _engine.go_: This is the sed-VM, and this file also has the entire public interface to the library. It 
   is arranged for simplicity. You have one function to create an Engine from a sed program, a method on that
