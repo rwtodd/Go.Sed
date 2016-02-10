@@ -14,13 +14,15 @@ versions of the same. It takes '-help'.
 
 __Regexps__: The only thing you really have to keep in mind when using 
 go-sed, is I use Go's "regexp" package. Therefore, you have to use that 
-syntax for the regular expressions.  In particular, the biggest difference 
-between go-sed and a typical sed with extended regexps, is that replacements 
-are on `$1` and `$2` instead of `\1` and `\2`:
+syntax for the regular expressions.  The main differences I've noticed 
+in practice are: 
 
-    /trigger/ {
-        s/a(bc*)d/$1/g
-    }
+| Go-sed          |  Traditional RE   | Notes                             |
+| --------------- | ----------------- | --------------------------------- |
+|  s/a(bc*)d/$1/g |  s/a\(bc*\)d/\1/g | Don't escape (); Use $1, $2, etc. |
+|  s/(?s).//      |  s/.//            | If you want dot to match \n, use (?s) flag.  |
+
+Go's regexps have many rich options, which you can see [here](https://github.com/google/re2/wiki/Syntax).
 
 There are a few niceties though, such as I interpret '\t' and '\n' in 
 replacement strings:
