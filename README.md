@@ -59,7 +59,7 @@ And, if you want to embed a sed engine in your own program, you can import:
 
     import "github.com/waywardcode/sed"
 
-The package docs are up at [https://godoc.org/github.com/waywardcode/sed](https://godoc.ord/github.com/waywardcode/sed).
+The package docs are up at [https://godoc.org/github.com/waywardcode/sed](https://godoc.org/github.com/waywardcode/sed).
 
 ## Implementation Notes
 
