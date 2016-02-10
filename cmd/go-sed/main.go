@@ -10,17 +10,28 @@ import (
 	"github.com/waywardcode/sed"
 )
 
+
 var noPrint bool
-var evalProg string
 var sedFile string
+type evalStrings []string
+var evalProg evalStrings
+
+func (es *evalStrings) String() string {
+  return strings.Join(*es," ; ")
+}
+
+func (es *evalStrings) Set(v string) error {
+  *es = append(*es,v)
+  return nil
+}
 
 func init() {
 	flag.BoolVar(&noPrint, "n", false, "do not automatically print lines")
 	flag.BoolVar(&noPrint, "silent", false, "do not automatically print lines")
 	flag.BoolVar(&noPrint, "quiet", false, "do not automatically print lines")
 
-	flag.StringVar(&evalProg, "e", "", "a string to evaluate as the program")
-	flag.StringVar(&evalProg, "expression", "", "a string to evaluate as the program")
+	flag.Var(&evalProg, "e", "a string to evaluate as the program")
+	flag.Var(&evalProg, "expression", "a string to evaluate as the program")
 
 	flag.StringVar(&sedFile, "f", "", "a file to read as the program")
 	flag.StringVar(&sedFile, "file", "", "a file to read as the program")
@@ -31,8 +42,8 @@ func compileScript(args *[]string) (*sed.Engine, error) {
 
 	// STEP ONE: Find the script
 	switch {
-	case evalProg != "":
-		program = strings.NewReader(evalProg)
+	case len(evalProg) > 0:
+		program = strings.NewReader(evalProg.String())
 		if sedFile != "" {
 			return nil, fmt.Errorf("Cannot specify both an expression and a program file!")
 		}
