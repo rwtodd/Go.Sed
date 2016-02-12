@@ -207,10 +207,15 @@ func readReplacement(r *locReader, delimiter rune) (string, error) {
 		if previous == '\\' {
 			// find out what we escaped...
 			switch character {
+			case 'r':
+				buffer.WriteRune('\r')
 			case 't':
 				buffer.WriteRune('\t')
 			case 'n':
 				buffer.WriteRune('\n')
+			case '\\':
+				buffer.WriteRune(character)
+				character = ' ' // don't escape the next one
 			default:
 				buffer.WriteRune(character)
 			}
