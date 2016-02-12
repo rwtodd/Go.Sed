@@ -10,19 +10,20 @@ import (
 	"github.com/waywardcode/sed"
 )
 
-
 var noPrint bool
 var sedFile string
+
 type evalStrings []string
+
 var evalProg evalStrings
 
 func (es *evalStrings) String() string {
-  return strings.Join(*es," ; ")
+	return strings.Join(*es, " ; ")
 }
 
 func (es *evalStrings) Set(v string) error {
-  *es = append(*es,v)
-  return nil
+	*es = append(*es, v)
+	return nil
 }
 
 func init() {
@@ -58,6 +59,10 @@ func compileScript(args *[]string) (*sed.Engine, error) {
 		// no -e or -f given, so the first argument is taken as the script to run
 		program = strings.NewReader((*args)[0])
 		*args = (*args)[1:]
+	default:
+		// we didn't get anything valid...
+		flag.Usage()
+		return nil, fmt.Errorf("No sed program given (-e or -f args).")
 	}
 
 	// STEP TWO: compile the program
@@ -75,18 +80,23 @@ func main() {
 	args := flag.Args()
 	var err error
 
+	var errCheck = func() {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(2)
+		}
+	}
+
 	// Find and compile the script
 	engine, err := compileScript(&args)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return
-	}
+	errCheck()
 
 	if len(args) == 0 {
 		err = engine.Run(os.Stdin, os.Stdout)
 	} else {
 		for _, fname := range args {
-			fl, err := os.Open(fname)
+			var fl *os.File
+			fl, err = os.Open(fname)
 			if err != nil {
 				break
 			}
@@ -99,8 +109,5 @@ func main() {
 			}
 		}
 	}
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-	}
+	errCheck()
 }
