@@ -83,7 +83,7 @@ func main() {
 	var errCheck = func() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(2)
+			os.Exit(1)
 		}
 	}
 
