@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/waywardcode/sed"
+	"go.waywardcode.com/sed"
 )
 
 var noPrint bool
