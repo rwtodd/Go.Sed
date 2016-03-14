@@ -1,4 +1,4 @@
-package main
+package main // import "go.waywardcode.com/sed/cmd/go-sed"
 
 import (
 	"flag"

@@ -1,4 +1,4 @@
-package sed
+package sed // import "go.waywardcode.com/sed"
 
 // This file has the functionality for substitution and translation.
 // They are the most complicated functions, so I didn't want
