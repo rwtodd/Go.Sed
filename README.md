@@ -57,9 +57,9 @@ You can get the code/executable by saying:
 
 And, if you want to embed a sed engine in your own program, you can import:
 
-    import "github.com/waywardcode/sed"
+    import "go.waywardcode.com/sed"
 
-The package docs are up at [https://godoc.org/github.com/waywardcode/sed](https://godoc.org/github.com/waywardcode/sed).
+The package docs are up at [https://godoc.org/go.waywardcode.com/sed](https://godoc.org/go.waywardcode.com/sed).
 
 ## Implementation Notes
 
