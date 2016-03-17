@@ -2,6 +2,7 @@ package sed // import "go.waywardcode.com/sed"
 
 import (
 	"bytes"
+	"io"
 	"testing"
 )
 
@@ -105,4 +106,37 @@ func TestCatS(t *testing.T) {
 `,
 		"one\n\n\n\ntwo\n\n\n\nthree\n",
 		"one\n\ntwo\n\nthree\n")
+}
+
+func TestOverflow(t *testing.T) {
+	prog := `
+# a program to commify numbers
+:loop 
+s/(.*\d)(\d\d\d)/$1,$2/
+t loop
+`
+	engine, err := New(bytes.NewBufferString(prog))
+	if err != nil {
+		t.Fatalf("Couldn't parse program <%s>, %s", prog, err.Error())
+	}
+
+	inbuf := bytes.NewBufferString("123456\n")
+	wrapped, err := engine.Wrap(inbuf)
+	if err != nil {
+		t.Fatalf("Couldn't wrap program <%s>, %s", prog, err.Error())
+	}
+
+	var ans string
+	var buffer = make([]byte, 2) // pathological 2-byte buffer!
+	for err == nil {
+		var amt int
+		amt, err = wrapped.Read(buffer)
+		ans += string(buffer[:amt])
+	}
+	if err != io.EOF {
+		t.Fatalf("Couldn't process program <%s>, %s", prog, err.Error())
+	}
+	if ans != "123,456\n" {
+		t.Fatalf("Incorrect Answer <%s> instead of 123,456", ans)
+	}
 }

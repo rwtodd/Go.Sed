@@ -10,6 +10,10 @@ versions of the same. It takes '-help'.
   * __Parser/Engine__:  Has every command in a typical sed now. 
  It has:  a\, i\, c\, d, D, p, P, g, G, x, h, H, r, w, s, y, b, t, :label, n, N, q, =.
 
+This `sed` engine can be embedded in your program, wrapping any `io.Reader` so that
+the stream is lazily processed as you read from it.  Of course I also have a command-line
+driver program here (in package `go.waywardcode.com/sed/cmd/go-sed`).
+
 ## Differences from Standard Sed
 
 __Regexps__: The only thing you really have to keep in mind when using 
@@ -77,7 +81,7 @@ The library is spread out among several files:
   with the parser. This is more of a design win than a performance win, but it is more than
   fast enough.
   * _parse.go_: Takes tokens from the lexer and parses the sed program. It's really a
-  parser+compiler, becuase the output is an array of instructions for the engine to 
+  parser+compiler, becuase the output is an array of instructions for the VM to 
   interpret.  Because the tokens are designed to be pretty self-contained, this parser
   doesn't ever need to backtrack.  I always like it when I can achieve that.
 
@@ -85,20 +89,20 @@ The library is spread out among several files:
   stored off, along with the name.  Then, after the initial parse, each branch
   is fixed up against the proper target.
 
-  * _instructions.go_: This file holds all of the engine instructions except for substitution and 
-  translation, which are in _substitution.go_.  An instruction for the engine I've built is just a 
-  `func (e *engine) error`.   This turned out to be a very flexible arrangement.  Most instructions
+  * _instructions.go_: This file holds all of the VM instructions except for substitution and 
+  translation, which are in _substitution.go_.  An instruction for the VM I've built is just a 
+  `func (svm *vm) error`.   This turned out to be a very flexible arrangement.  Most instructions
   have a 1:1 mapping to sed commands, but others (like the 'n' command) are broken up at parse time
   into multiple engine instructions.
 
-  Simple instructions, like `cmd_get` (handles the `g` sed command), are package functions, which
+  Simple instructions, like `cmd_get` (which handles the `g` sed command), are package functions, which
   can get inserted into the instruction stream context-free.  A few instructions have state, such
   as the string to insert in an `i\` command. For those, a closure holds the state:
 
       func cmd_newInserter(text string) instruction {
-           return func(e *Engine) error {
-               e.ip++
-               _,err := e.output.WriteString(text)
+           return func(svm *vm) error {
+               vm.ip++
+               _,err := svm.output.WriteString(text)
                return err
            }
       }
@@ -107,21 +111,21 @@ The library is spread out among several files:
   and an associated `run` method. That `run` method pointer becomes the instruction.
 
   You can see in the example above that each instruction is responsible for incrementing the IP (_instruction pointer_)
-  in the Engine. That's flexible because many of the instructions branch, and they can set the IP to whatever
+  in the VM. That's flexible because many of the instructions branch, and they can set the IP to whatever
   they need. However, this was the __number one__ cause of bugs during development: I'd add a new command, and forget
   to increment the IP, leading to an infinite loop on that instruction.  So, I possibly should have had the 
-  engine auto-increment the IP, and have the branching instructions account for that when setting IP.  It was a
+  VM auto-increment the IP, and have the branching instructions account for that when setting IP.  It was a
   trade-off between keeping the inner loop as tight as possible and keeping the instructions as simple as 
   possible.  I might have made the wrong choice there. 
 
   * _engine.go_: This is the sed-VM, and this file also has the entire public interface to the library. It 
-  is arranged for simplicity. You have one function to create an Engine from a sed program, a method on that
-  engine to run it against inputs.  The same engine can be re-used against multiple inputs. 
+  is arranged for simplicity. You have one function to create an Engine from a sed program, and you can
+  use that Engine to wrap an `io.Reader`. The same engine can be re-used against multiple inputs. 
 
   The inner loop of the interpreter very compact:
 
       for err == nil {
-         err = e.ins[e.ip](e)
+         err = svm.ins[svm.ip](svm)
       }
 
   * _conditions.go_: Conditions are what I call the guards around commands (like the `1,10` in `1,10d`). The

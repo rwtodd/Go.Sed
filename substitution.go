@@ -23,11 +23,11 @@ type substitute struct {
 	gflag       bool           // do we replace every match after 'which'?
 }
 
-func (s *substitute) run(e *Engine) (err error) {
-	e.ip++
+func (s *substitute) run(svm *vm) (err error) {
+	svm.ip++
 
 	// perform the search
-	matches := s.pattern.FindAllStringSubmatchIndex(e.pat, -1)
+	matches := s.pattern.FindAllStringSubmatchIndex(svm.pat, -1)
 
 	// filter to the matches we want to replace
 	var end int = len(matches)
@@ -42,13 +42,13 @@ func (s *substitute) run(e *Engine) (err error) {
 	matches = matches[s.which:end]
 
 	// perform the replacement
-	e.pat = subst_replaceAll(e.pat, s, matches)
-	e.modified = true
+	svm.pat = subst_replaceAll(svm.pat, s, matches)
+	svm.modified = true
 
 	// print if requested
 	if s.pflag {
-		err = cmd_print(e)
-		e.ip-- // roll back ip from the print command
+		err = cmd_print(svm)
+		svm.ip-- // roll back ip from the print command
 	}
 
 	return
@@ -130,9 +130,9 @@ func newTranslation(pattern string, replacement string) (instruction, error) {
 	stringReplacer := strings.NewReplacer(repls...)
 
 	// now return a custom-made instruction for this translation:
-	return func(e *Engine) error {
-		e.pat = stringReplacer.Replace(e.pat)
-		e.ip++
+	return func(svm *vm) error {
+		svm.pat = stringReplacer.Replace(svm.pat)
+		svm.ip++
 		return nil
 	}, nil
 }
