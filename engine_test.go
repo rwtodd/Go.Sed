@@ -1,14 +1,14 @@
 package sed // import "go.waywardcode.com/sed"
 
 import (
-	"bytes"
 	"io"
+        "strings"
 	"testing"
 )
 
 // a driver for running a program against input, and checking the output
 func runprog(t *testing.T, prog, input, expected string) {
-	engine, err := New(bytes.NewBufferString(prog))
+	engine, err := New(strings.NewReader(prog))
 	if err != nil {
 		t.Fatalf("Couldn't parse program <%s>, %s", prog, err.Error())
 	}
@@ -115,12 +115,12 @@ func TestOverflow(t *testing.T) {
 s/(.*\d)(\d\d\d)/$1,$2/
 t loop
 `
-	engine, err := New(bytes.NewBufferString(prog))
+	engine, err := New(strings.NewReader(prog))
 	if err != nil {
 		t.Fatalf("Couldn't parse program <%s>, %s", prog, err.Error())
 	}
 
-	inbuf := bytes.NewBufferString("123456\n")
+	inbuf := strings.NewReader("123456\n")
 	wrapped := engine.Wrap(inbuf)
 
 	var ans string

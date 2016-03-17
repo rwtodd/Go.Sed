@@ -16,6 +16,7 @@ package sed // import "go.waywardcode.com/sed"
 import (
 	"bufio"
 	"bytes"
+        "strings"
 	"io"
 )
 
@@ -123,7 +124,7 @@ func (v *vm) Read(p []byte) (int, error) {
 // given string as input, returning the output string and any
 // errors that occured.
 func (e *Engine) RunString(input string) (string, error) {
-	inbuf := bytes.NewBufferString(input)
+	inbuf := strings.NewReader(input)
 	var outbytes bytes.Buffer
 
 	_, err := io.Copy(&outbytes, e.Wrap(inbuf))
