@@ -121,10 +121,7 @@ t loop
 	}
 
 	inbuf := bytes.NewBufferString("123456\n")
-	wrapped, err := engine.Wrap(inbuf)
-	if err != nil {
-		t.Fatalf("Couldn't wrap program <%s>, %s", prog, err.Error())
-	}
+	wrapped := engine.Wrap(inbuf)
 
 	var ans string
 	var buffer = make([]byte, 2) // pathological 2-byte buffer!

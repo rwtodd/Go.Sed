@@ -86,7 +86,7 @@ func (e *Engine) Wrap(input io.Reader) io.Reader {
 	bufin := bufio.NewReader(input)
 
 	// prime the engine by resetting the internal flags and filling nxtl...
-	return  &vm{ins: e.ins, input: bufin, lineno: -1, ip: -1}
+	return &vm{ins: e.ins, input: bufin, lineno: -1, ip: -1}
 }
 
 // Read turns a vm into an io.Reader.
@@ -94,12 +94,12 @@ func (v *vm) Read(p []byte) (int, error) {
 	var err error
 	v.output = p
 
-        if v.lineno == -1  {
-                // we have an uninitialized stream
-        	err = cmd_fillNext(v)
-                v.ip = 0
-        } else if len(v.overflow) > 0 {
-                // we have overflow to work on
+	if v.lineno == -1 {
+		// we have an uninitialized stream
+		err = cmd_fillNext(v)
+		v.ip = 0
+	} else if len(v.overflow) > 0 {
+		// we have overflow to work on
 		o := v.overflow
 		v.overflow = ""
 		err = writeString(v, o)
@@ -126,7 +126,7 @@ func (e *Engine) RunString(input string) (string, error) {
 	inbuf := bytes.NewBufferString(input)
 	var outbytes bytes.Buffer
 
-        _, err := io.Copy(&outbytes, e.Wrap(inbuf))
+	_, err := io.Copy(&outbytes, e.Wrap(inbuf))
 
 	if err == io.EOF {
 		err = nil
