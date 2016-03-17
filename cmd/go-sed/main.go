@@ -75,18 +75,6 @@ func compileScript(args *[]string) (*sed.Engine, error) {
 	return compiler(program)
 }
 
-func runEngine(e *sed.Engine, rdr io.Reader) error {
-	var wrapped io.Reader
-	var err error
-
-	wrapped, err = e.Wrap(rdr)
-	if err == nil {
-		_, err = io.Copy(os.Stdout, wrapped)
-	}
-
-	return err
-}
-
 func main() {
 	flag.Parse()
 	args := flag.Args()
@@ -104,13 +92,13 @@ func main() {
 	errCheck()
 
 	if len(args) == 0 {
-		err = runEngine(engine, os.Stdin)
+		_, err = io.Copy(os.Stdout, engine.Wrap(os.Stdin))
 	} else {
 		for _, fname := range args {
 			var fl *os.File
 			fl, err = os.Open(fname)
 			if err == nil {
-				err = runEngine(engine, fl)
+				_, err = io.Copy(os.Stdout, engine.Wrap(fl))
 			}
 
 			fl.Close()

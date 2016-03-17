@@ -82,19 +82,11 @@ func NewQuiet(program io.Reader) (*Engine, error) {
 // input.  The sed program is run lazily against the input as the user
 // asks for bytes.  If you'd prefer to run all at once from string to
 // string, use RunString instead.
-func (e *Engine) Wrap(input io.Reader) (io.Reader, error) {
-	var err error
+func (e *Engine) Wrap(input io.Reader) io.Reader {
 	bufin := bufio.NewReader(input)
 
 	// prime the engine by resetting the internal flags and filling nxtl...
-	rdr := &vm{ins: e.ins, input: bufin}
-	err = cmd_fillNext(rdr)
-
-	// roll back the IP and lineno
-	rdr.ip = 0
-	rdr.lineno = 0
-
-	return rdr, err
+	return  &vm{ins: e.ins, input: bufin, lineno: -1, ip: -1}
 }
 
 // Read turns a vm into an io.Reader.
@@ -102,8 +94,12 @@ func (v *vm) Read(p []byte) (int, error) {
 	var err error
 	v.output = p
 
-	// first, attempt to output any overflow
-	if len(v.overflow) > 0 {
+        if v.lineno == -1  {
+                // we have an uninitialized stream
+        	err = cmd_fillNext(v)
+                v.ip = 0
+        } else if len(v.overflow) > 0 {
+                // we have overflow to work on
 		o := v.overflow
 		v.overflow = ""
 		err = writeString(v, o)
@@ -129,10 +125,8 @@ func (v *vm) Read(p []byte) (int, error) {
 func (e *Engine) RunString(input string) (string, error) {
 	inbuf := bytes.NewBufferString(input)
 	var outbytes bytes.Buffer
-	wrapped, err := e.Wrap(inbuf)
-	if err == nil {
-		_, err = io.Copy(&outbytes, wrapped)
-	}
+
+        _, err := io.Copy(&outbytes, e.Wrap(inbuf))
 
 	if err == io.EOF {
 		err = nil
