@@ -12,7 +12,7 @@ versions of the same. It takes '-help'.
 
 This `sed` engine can be embedded in your program, wrapping any `io.Reader` so that
 the stream is lazily processed as you read from it.  Of course I also have a command-line
-driver program here (in package `go.waywardcode.com/sed/cmd/go-sed`).
+driver program here (in package `github.com/rwtodd/sed-go/cmd/go-sed`).
 
 ## Differences from Standard Sed
 
