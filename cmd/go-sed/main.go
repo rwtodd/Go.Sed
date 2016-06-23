@@ -1,4 +1,4 @@
-package main // import "go.waywardcode.com/sed/cmd/go-sed"
+package main
 
 import (
 	"flag"
@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"go.waywardcode.com/sed"
+	"github.com/rwtodd/sed-go"
 )
 
 var noPrint bool

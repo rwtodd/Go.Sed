@@ -1,4 +1,4 @@
-package sed // import "go.waywardcode.com/sed"
+package sed
 
 import (
 	"errors"

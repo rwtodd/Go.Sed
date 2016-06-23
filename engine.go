@@ -11,7 +11,7 @@
 // So this is a Go-flavored sed, rather than a drop-in replacement for
 // a UNIX sed.  Depending on your tastes, you will either consider this
 // an improvement or completely brain-dead.
-package sed // import "go.waywardcode.com/sed"
+package sed
 
 import (
 	"bufio"

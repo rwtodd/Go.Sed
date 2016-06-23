@@ -57,13 +57,13 @@ Go-sed is unicode-friendly:
 
 You can get the code/executable by saying:
 
-    go get go.waywardcode.com/sed/cmd/go-sed
+    go get github.com/rwtodd/sed-go/cmd/go-sed
 
 And, if you want to embed a sed engine in your own program, you can import:
 
-    import "go.waywardcode.com/sed"
+    import "github.com/rwtodd/sed-go"
 
-The package docs are up at [https://godoc.org/go.waywardcode.com/sed](https://godoc.org/go.waywardcode.com/sed).
+The package docs are up at [https://godoc.org/github.com/rwtodd/sed-go](https://godoc.org/github.com/rwtodd/sed-go).
 
 ## Implementation Notes
 
