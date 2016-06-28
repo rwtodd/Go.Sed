@@ -1,4 +1,4 @@
-# Go-Sed 
+# Sed-Go
 
 An implementation of sed in Go.  Just because!
 
@@ -12,7 +12,7 @@ versions of the same. It takes '-help'.
 
 This `sed` engine can be embedded in your program, wrapping any `io.Reader` so that
 the stream is lazily processed as you read from it.  Of course I also have a command-line
-driver program here (in package `github.com/rwtodd/sed-go/cmd/go-sed`).
+driver program here (in package `github.com/rwtodd/sed-go/cmd/sed-go`).
 
 ## Differences from Standard Sed
 
@@ -57,7 +57,7 @@ Go-sed is unicode-friendly:
 
 You can get the code/executable by saying:
 
-    go get github.com/rwtodd/sed-go/cmd/go-sed
+    go get github.com/rwtodd/sed-go/cmd/sed-go
 
 And, if you want to embed a sed engine in your own program, you can import:
 
