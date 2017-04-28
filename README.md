@@ -12,7 +12,7 @@ versions of the same. It takes '-help'.
 
 This `sed` engine can be embedded in your program, wrapping any `io.Reader` so that
 the stream is lazily processed as you read from it.  Of course I also have a command-line
-driver program here (in package `github.com/rwtodd/sed-go/cmd/sed-go`).
+driver program here (in package `github.com/rwtodd/Go.Sed/cmd/sed-go`).
 
 ## Differences from Standard Sed
 
@@ -46,24 +46,23 @@ Also, in a typical sed, you need seemingly-extraneous semicolons like the one af
 
 ... but go-sed is nicer about it:
 
-    go-sed -e '/re/ { p ; d }' < in > out 
+    sed-go -e '/re/ { p ; d }' < in > out 
 
 __Unicode__: Original sed had no idea about unicode, but modern ones do, and 
 Go-sed is unicode-friendly:
 
-    go-sed -e 'y/go/世界/' < in > out
+    sed-go -e 'y/go/世界/' < in > out
 
 ## Go Get
 
 You can get the code/executable by saying:
 
-    go get github.com/rwtodd/sed-go/cmd/sed-go
+    go get github.com/rwtodd/Go.Sed/cmd/sed-go
 
 And, if you want to embed a sed engine in your own program, you can import:
 
-    import "github.com/rwtodd/sed-go"
+    import sed "github.com/rwtodd/Go.Sed"
 
-The package docs are up at [https://godoc.org/github.com/rwtodd/sed-go](https://godoc.org/github.com/rwtodd/sed-go).
 
 ## Implementation Notes
 
