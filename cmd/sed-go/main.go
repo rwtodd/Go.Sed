@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	sed "github.com/rwtodd/Go.Sed"
+	"github.com/rwtodd/Go.Sed/sed"
 )
 
 var noPrint bool

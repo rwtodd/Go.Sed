@@ -61,7 +61,7 @@ You can get the code/executable by saying:
 
 And, if you want to embed a sed engine in your own program, you can import:
 
-    import sed "github.com/rwtodd/Go.Sed"
+    import "github.com/rwtodd/Go.Sed/sed"
 
 
 ## Implementation Notes
