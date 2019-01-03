@@ -53,6 +53,30 @@ Go-sed is unicode-friendly:
 
     sed-go -e 'y/go/世界/' < in > out
 
+## Embed in your Code
+
+I built the program as a library so that `sed` can be embedded into programs, wrapping
+any available `Reader`.  The library processes the input lazily as you read bytes from
+the wrapped `Reader`.
+
+Obviously, custom string-processing code is faster, but for quick and one-off tasks,
+this can be just what you need.  For example, you want to strip out unix-style comments
+from a file, but can't be bothered to write the Go code at the moment:
+
+~~~~~~go
+engine, err := sed.New(strings.NewReader(`/^#/d  s/ *#.*//`))
+n, err := io.Copy(myOutput, engine.Wrap(myInput))
+~~~~~~
+
+If your input is a string, and you just want to get a processed string back,
+there is `RunString`:
+
+~~~~~~go
+output, err := engine.RunString(inString)
+~~~~~~
+
+Note that, if you want an engine that emulates sed's `-n` quiet mode, use `NewQuiet` instead of `New`.
+
 ## Go Get
 
 You can get the code/executable by saying:
@@ -63,6 +87,7 @@ And, if you want to embed a sed engine in your own program, you can import:
 
     import "github.com/rwtodd/Go.Sed/sed"
 
+(2019-01-03: I added a `go.mod` file to the repo so it can be built outside of `$GOPATH`)
 
 ## Implementation Notes
 
