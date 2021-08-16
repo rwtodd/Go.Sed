@@ -77,13 +77,17 @@ output, err := engine.RunString(inString)
 
 Note that, if you want an engine that emulates sed's `-n` quiet mode, use `NewQuiet` instead of `New`.
 
-## Go Get
+## Building the sed-go executable
 
-You can get the code/executable by saying:
+From the root of the repository, you should be able to build the driver program with:
 
-    go get github.com/rwtodd/Go.Sed/cmd/sed-go
+~~~~~~
+go build ./cmd/sed-go
+~~~~~~
 
-And, if you want to embed a sed engine in your own program, you can import:
+## Sample Import Statement
+
+If you want to embed a sed engine in your own program, you can import:
 
     import "github.com/rwtodd/Go.Sed/sed"
 
