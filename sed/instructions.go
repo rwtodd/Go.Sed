@@ -194,10 +194,15 @@ func cmd_fillNext(svm *vm) error {
 func cmd_fillNextAppend(svm *vm) error {
 	var lines = make([]string, 2)
 	lines[0] = svm.pat
-	err := cmd_fillNext(svm) // increments svm.ip, so we don't
-	lines[1] = svm.pat
-	svm.pat = strings.Join(lines, "\n")
-	return err
+	err := cmd_fillNext(svm) // usually increments ip for us...
+	if err == nil {
+		lines[1] = svm.pat
+		svm.pat = strings.Join(lines, "\n")
+	} else if err == io.EOF {
+		// we have to increment ip when we are ignoring EOF
+		svm.ip++
+	}
+	return nil
 }
 
 // --------------------------------------------------

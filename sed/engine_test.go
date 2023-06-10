@@ -2,7 +2,7 @@ package sed
 
 import (
 	"io"
-        "strings"
+	"strings"
 	"testing"
 )
 
@@ -22,6 +22,30 @@ func runprog(t *testing.T, prog, input, expected string) {
 		t.Fatalf("Program got result <%s> instead of <%s>", result, expected)
 	}
 
+}
+
+func TestReplNewlineWithSpace(t *testing.T) {
+	prog := `:a;N;$!ba;s/\n/ /g` // as seen at https://linuxhint.com/sed-replace-newline-with-space/
+	// ... and GitHub Issue #7 ... https://github.com/rwtodd/Go.Sed/issues/7
+	runprog(t, prog,
+		"first\nsecond\nthird\n",
+		"first second third\n")
+	runprog(t, prog,
+		"first\nsecond\n",
+		"first second\n")
+	runprog(t, prog,
+		"first\n",
+		"first\n")
+}
+
+func TestBranchRedo(t *testing.T) {
+	prog := `:redo;s/^([^]]*\[[^] ]*) /${1}_/;t redo`
+	runprog(t, prog,
+		"one [place with some brackets] [and another]\n",
+		"one [place_with_some_brackets] [and another]\n")
+	runprog(t, prog,
+		"one line without brackets\n",
+		"one line without brackets\n")
 }
 
 func TestCommify(t *testing.T) {
