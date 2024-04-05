@@ -4,8 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path"
 	"strings"
+	"syscall"
 
 	"github.com/rwtodd/Go.Sed/sed"
 )
@@ -16,6 +19,8 @@ var sedFile string
 type evalStrings []string
 
 var evalProg evalStrings
+
+var inplace bool
 
 func (es *evalStrings) String() string {
 	return strings.Join(*es, " ; ")
@@ -36,6 +41,8 @@ func init() {
 
 	flag.StringVar(&sedFile, "f", "", "a file to read as the program")
 	flag.StringVar(&sedFile, "file", "", "a file to read as the program")
+
+	flag.BoolVar(&inplace, "i", false, "change file(s) inplace")
 }
 
 func compileScript(args *[]string) (*sed.Engine, error) {
@@ -80,32 +87,89 @@ func main() {
 	args := flag.Args()
 	var err error
 
-	var errCheck = func() {
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-	}
-
 	// Find and compile the script
 	engine, err := compileScript(&args)
-	errCheck()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "script compile failed: %s\n", err)
+		os.Exit(1)
+	}
 
 	if len(args) == 0 {
 		_, err = io.Copy(os.Stdout, engine.Wrap(os.Stdin))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "engine failed: %s\n", err)
+			os.Exit(2)
+		}
 	} else {
-		for _, fname := range args {
-			var fl *os.File
-			fl, err = os.Open(fname)
-			if err == nil {
-				_, err = io.Copy(os.Stdout, engine.Wrap(fl))
+		for _, filename := range args {
+			var inputFile *os.File
+			inputFile, err = os.Open(filename)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "open input file '%s' failed: %s\n", filename, err)
+				os.Exit(3)
 			}
 
-			fl.Close()
+			var (
+				target   io.Writer = os.Stdout
+				tempFile *os.File
+			)
+			if inplace {
+				tempFilename := fmt.Sprintf("%s-*", path.Base(filename))
+				tempFile, err = ioutil.TempFile(path.Dir(filename), tempFilename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "failed to create temporary file: %s\n", err)
+					os.Exit(4)
+				}
+				target = tempFile
+			}
+
+			_, err = io.Copy(target, engine.Wrap(inputFile))
 			if err != nil {
-				break
+				fmt.Fprintf(os.Stderr, "engine failed on file '%s': %s\n", filename, err)
+				os.Exit(5)
+			}
+
+			inputFile.Close()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "closing input file '%s' failed: %s\n", filename, err)
+				os.Exit(6)
+			}
+
+			if inplace {
+				stat, err := os.Stat(filename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "stat of '%s' failed: %s\n", filename, err)
+					os.Exit(8)
+				}
+
+				err = tempFile.Chmod(stat.Mode())
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "set mode of '%s' failed: %s\n", tempFile.Name(), err)
+					os.Exit(9)
+				}
+
+				tempFile.Close()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "closing temporary file '%s' failed: %s\n", tempFile.Name(), err)
+					os.Exit(7)
+				}
+
+				tmp := stat.Sys()
+				statSys, ok := tmp.(*syscall.Stat_t)
+				if ok {
+					err = os.Chown(tempFile.Name(), int(statSys.Uid), int(statSys.Gid))
+					if err != nil {
+						// errors might be platform related, just warn
+						fmt.Fprintf(os.Stderr, "failed to set UID/GID on tempfile '%s': %s\n", tempFile.Name(), err)
+					}
+				}
+
+				err = os.Rename(tempFile.Name(), filename)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "renaming tempfile '%s' to %s failed: %s\n", tempFile.Name(), filename, err)
+					os.Exit(10)
+				}
 			}
 		}
 	}
-	errCheck()
 }
